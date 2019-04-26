@@ -32,7 +32,7 @@ The problem is that lzma-native fails to build due to an outdated version being 
 
 You must update the dependencies as done in [this commit](https://github.com/kevva/decompress-tarxz/pull/11/commits/c5fc28f00e43e8b8dff7a65f489b264acb064693).
 
-Then run ```sh electron-builder install-app-deps ```
+Then run ``` electron-builder install-app-deps ```
 
 
 ### Update
