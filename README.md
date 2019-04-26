@@ -1,4 +1,3 @@
-![Timelapse Webcam](https://github.com/bavamont/timelapse-webcam/app/assets/app/icons/48x48.png) 
 Timelapse Webcam
 =======
 
