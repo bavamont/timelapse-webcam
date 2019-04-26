@@ -1,0 +1,95 @@
+{
+  "name": "timelapse-webcam",
+  "productName": "Timelapse Webcam",
+  "version": "0.0.1",
+  "author": {
+    "name": "Bavamont",
+    "email": "mk@bavamont.com",
+    "url": "https://www.bavamont.com"
+  },
+  "homepage": "https://github.com/bavamont/timelapse-webcam",
+  "description": "Timelapse Webcam",
+  "keywords": [
+    "timelapse",
+    "webcam"
+  ],
+  "repository": "https://github.com/bavamont/timelapse-webcam",
+  "license": "MIT",
+  "main": "app/main.js",
+  "scripts": {
+    "postinstall": "install-app-deps",
+    "start": "electron .",
+    "dist": "build --win",
+    "ship": "build --win -p always"
+  },
+  "build": {
+    "productName": "Timelapse Webcam",
+    "appId": "com.bavamont.timelapsewebcam",
+    "directories": {
+      "output": "build"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "bavamont",
+        "repo": "timelapse-webcam",
+        "private": false
+      }
+    ],
+    "asar": true,
+    "asarUnpack": "node_modules/ffmpeg-binaries/bin/",
+    "files": [
+      "app/**/*",
+      "!node_modules/*"
+    ],
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "icon": "app/assets/app/icons/mac/icon.icns"
+    },
+    "mac": {
+      "icon": "app/assets/app/icons/mac/icon.icns"
+    },
+    "nsis": {
+      "createDesktopShortcut": true,
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,      
+      "installerIcon": "app/assets/app/icons/win/icon.ico",
+      "artifactName": "${productName}-${version}.${ext}"
+    },
+    "win": {
+      "icon": "app/assets/app/icons/win/icon.ico",
+      "target": "nsis"
+    },
+    "linux": {
+      "icon": "app/assets/app/icons/linux/icon.png"
+    }
+  },
+  "devDependencies": {
+    "electron": "^4.1.4",
+    "electron-builder": "^20.40.2",
+    "electron-rebuild": "^1.8.4"
+  },
+  "dependencies": {
+    "cron": "^1.7.0",
+    "electron-updater": "^4.0.9",
+    "ffmpeg-binaries": "^4.0.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "font-manager": "^0.3.0",
+    "fs-extra": "^7.0.1",
+    "image-size": "^0.7.3",
+    "keytar": "^4.4.1",
+    "moment": "^2.24.0",
+    "ssh2": "^0.8.2"
+  }
+}
