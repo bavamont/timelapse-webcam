@@ -1,93 +1,233 @@
 {
   "name": "timelapse-webcam",
-  "productName": "Timelapse Webcam",
-  "version": "0.0.1",
-  "author": {
-    "name": "Bavamont",
-    "email": "mk@bavamont.com",
-    "url": "https://www.bavamont.com"
-  },
+  "version": "1.0.0",
+  "description": "Create stunning timelapse videos from your webcam with automatic capture, FTP upload, professional video creation, and advanced text/image watermarking support.",
+  "main": "main.js",
+  "author": "Bavamont",
   "homepage": "https://github.com/bavamont/timelapse-webcam",
-  "description": "Timelapse Webcam",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bavamont/timelapse-webcam.git"
+  },
   "keywords": [
+    "electron",
     "timelapse",
-    "webcam"
+    "webcam",
+    "video-creation",
+    "ffmpeg",
+    "ftp-upload",
+    "photography",
+    "time-lapse",
+    "video-processing",
+    "capture",
+    "automation",
+    "streaming",
+    "video-effects",
+    "watermark",
+    "image-watermark",
+    "text-watermark",
+    "logo-overlay",
+    "branding",
+    "auto-updater",
+    "image-processing",
+    "transparency",
+    "opacity-control",
+    "professional-tools"
   ],
-  "repository": "https://github.com/bavamont/timelapse-webcam",
-  "license": "MIT",
-  "main": "app/main.js",
   "scripts": {
-    "postinstall": "install-app-deps",
     "start": "electron .",
-    "dist": "build --win",
-    "ship": "build --win -p always"
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "dist": "npm run build",
+    "pack": "electron-builder --dir",
+    "postinstall": "electron-builder install-app-deps",
+    "rebuild": "electron-rebuild",
+    "clean": "rimraf dist build node_modules/.cache",
+    "lint": "eslint .",
+    "test": "jest",
+    "publish": "electron-builder --publish=always",
+    "publish:github": "electron-builder --publish=always",
+    "publish:draft": "electron-builder --publish=never"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.7.2",
+    "basic-ftp": "^5.0.4",
+    "electron-store": "^8.1.0",
+    "electron-updater": "^6.6.2",
+    "fs-extra": "^11.2.0",
+    "mime-types": "^2.1.35",
+    "node-cron": "^3.0.3",
+    "sharp": "^0.33.2",
+    "ssh2-sftp-client": "^12.0.1"
+  },
+  "devDependencies": {
+    "electron": "^37.2.4",
+    "electron-builder": "^26.0.12",
+    "electron-rebuild": "^3.2.9",
+    "eslint": "^9.7.0",
+    "jest": "^30.0.5",
+    "rimraf": "^6.0.1"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
   },
   "build": {
+    "appId": "com.bavamont.timelapse-webcam",
     "productName": "Timelapse Webcam",
-    "appId": "com.bavamont.timelapsewebcam",
     "directories": {
-      "output": "build"
+      "output": "dist",
+      "buildResources": "build"
     },
+    "files": [
+      "main.js",
+      "renderer.js",
+      "index.html",
+      "styles.css",
+      "i18n.js",
+      "assets/**/*",
+      "node_modules/**/*",
+      "!node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!node_modules/*.d.ts",
+      "!node_modules/.bin",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+      "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
+      "!**/{appveyor.yml,.travis.yml,circle.yml}",
+      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/",
+        "to": "assets/",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "electronUpdaterCompatibility": ">=2.16",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+      "verifyUpdateCodeSignature": false
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "category": "public.app-category.photography",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+      "hardenedRuntime": false
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "category": "AudioVideo",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Timelapse Webcam",
+      "warningsAsErrors": false,
+      "allowElevation": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
+    },
+    "dmg": {
+      "iconSize": 100,
+      "contents": [
+        {
+          "x": 380,
+          "y": 280,
+          "type": "link",
+          "path": "/Applications"
+        },
+        {
+          "x": 110,
+          "y": 280,
+          "type": "file"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 420
+      }
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.exe"
+    },
+    "compression": "maximum",
     "publish": [
       {
         "provider": "github",
         "owner": "bavamont",
         "repo": "timelapse-webcam",
-        "private": false
+        "releaseType": "release"
       }
-    ],
-    "asar": true,
-    "asarUnpack": "node_modules/ffmpeg-binaries/bin/",
-    "files": [
-      "app/**/*",
-      "!node_modules/*"
-    ],
-    "dmg": {
-      "contents": [
-        {
-          "x": 130,
-          "y": 220
-        },
-        {
-          "x": 410,
-          "y": 220,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ],
-      "icon": "app/assets/app/icons/mac/icon.icns"
-    },
-    "mac": {
-      "icon": "app/assets/app/icons/mac/icon.icns"
-    },
-    "nsis": {
-      "createDesktopShortcut": true,
-      "installerIcon": "app/assets/app/icons/win/icon.ico",
-      "artifactName": "${productName}-${version}.${ext}"
-    },
-    "win": {
-      "icon": "app/assets/app/icons/win/icon.ico",
-      "target": "nsis"
-    },
-    "linux": {
-      "icon": "app/assets/app/icons/linux/icon.png"
-    }
-  },
-  "devDependencies": {
-    "electron": "^4.1.5",
-    "electron-builder": "^20.40.2",
-    "electron-rebuild": "^1.8.4"
-  },
-  "dependencies": {
-    "cron": "^1.7.0",
-    "electron-updater": "^4.0.9",
-    "ffmpeg-binaries": "^4.0.0",
-    "fluent-ffmpeg": "^2.1.2",
-    "font-manager": "^0.3.0",
-    "fs-extra": "^7.0.1",
-    "image-size": "^0.7.4",
-    "keytar": "^4.4.1",
-    "moment": "^2.24.0",
-    "ssh2": "^0.8.3"
+    ]
   }
 }

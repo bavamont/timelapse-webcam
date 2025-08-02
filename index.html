@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timelapse Webcam</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+</head>
+<body>
+    <div class="custom-title-bar">
+        <div class="title-bar-content">
+            <div class="app-icon">
+                <img src="assets/icon.svg" alt="Timelapse Webcam" class="app-logo">
+            </div>
+            <div class="app-title" data-i18n="app.title">Timelapse Webcam</div>
+        </div>
+        <div class="window-controls">
+            <button class="window-control minimize-btn" id="minimize-btn">
+                <i class="fas fa-window-minimize"></i>
+            </button>
+            <button class="window-control maximize-btn" id="maximize-btn">
+                <i class="fas fa-window-maximize"></i>
+            </button>
+            <button class="window-control close-btn" id="close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <header class="app-header" id="app-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1><img src="assets/logo.svg" alt="Timelapse Webcam" class="header-logo"> <span data-i18n="app.title">Timelapse Webcam</span></h1>
+                    <p data-i18n="app.subtitle">Create stunning timelapse videos from your webcam</p>
+                </div>
+                <div class="header-right">
+                    <div class="btn btn-sm btn-outline capture-status" id="capture-status">
+                        <div class="status-indicator" id="status-indicator"></div>
+                        <span id="capture-status-text" data-i18n="capture.status_stopped">Stopped</span>
+                    </div>
+                    <button class="btn btn-sm btn-outline" id="check-updates-btn">
+                        <i class="fas fa-sync-alt"></i>
+                        <span data-i18n="updater.check_updates">Check for Updates</span>
+                    </button>
+                    <select id="language-selector" class="language-selector">
+                        <option value="en" data-i18n="lang.english">English</option>
+                        <option value="de" data-i18n="lang.german">Deutsch</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main" id="app-main">
+            <nav class="sidebar">
+                <div class="sidebar-content">
+                    <div class="nav-section">
+                        <div class="nav-item active" data-tab="capture">
+                            <i class="fas fa-camera"></i>
+                            <span data-i18n="nav.capture">Capture</span>
+                            <div class="nav-tooltip" data-i18n="nav.capture.tooltip">Webcam capture and settings</div>
+                        </div>
+                        <div class="nav-item" data-tab="timelapse">
+                            <i class="fas fa-film"></i>
+                            <span data-i18n="nav.timelapse">Timelapse</span>
+                            <div class="nav-tooltip" data-i18n="nav.timelapse.tooltip">Create and manage timelapse videos</div>
+                        </div>
+                        <div class="nav-item" data-tab="settings">
+                            <i class="fas fa-cogs"></i>
+                            <span data-i18n="nav.settings">Settings</span>
+                            <div class="nav-tooltip" data-i18n="nav.settings.tooltip">Application and upload settings</div>
+                        </div>
+                        <div class="nav-item" data-tab="help">
+                            <i class="fas fa-question-circle"></i>
+                            <span data-i18n="nav.help">Help</span>
+                            <div class="nav-tooltip" data-i18n="nav.help.tooltip">Usage guide and documentation</div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="content-area">
+                <div class="tab-content active" id="capture-tab">
+                    <div class="page-header">
+                        <h2><i class="fas fa-camera"></i> <span data-i18n="capture.title">Webcam Capture</span></h2>
+                        <p data-i18n="capture.subtitle">Configure your webcam and capture settings</p>
+                    </div>
+
+                    <div class="capture-grid">
+                        <div class="card capture-preview-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-eye"></i> <span data-i18n="capture.preview">Camera Preview</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="camera-preview-container">
+                                    <video id="camera-preview" class="camera-preview" autoplay muted playsinline></video>
+                                    <div class="camera-overlay" id="camera-overlay">
+                                        <div class="no-camera-message" id="no-camera-message">
+                                            <i class="fas fa-video-slash"></i>
+                                            <p data-i18n="capture.no_camera">No camera detected</p>
+                                        </div>
+                                    </div>
+                                    <div class="watermark-preview" id="watermark-preview"></div>
+                                    <img class="watermark-image-preview" id="watermark-image-preview" style="display: none;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card capture-controls-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-sliders-h"></i> <span data-i18n="settings.camera">Camera Settings</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="camera-select">
+                                        <i class="fas fa-camera"></i>
+                                        <span data-i18n="capture.select_camera">Select Camera</span>
+                                    </label>
+                                    <select id="camera-select">
+                                        <option value="" data-i18n="capture.no_cameras_available">No cameras available</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="resolution-select">
+                                        <i class="fas fa-expand-arrows-alt"></i>
+                                        <span data-i18n="capture.resolution">Resolution</span>
+                                    </label>
+                                    <select id="resolution-select">
+                                        <option value="640x480">640 × 480</option>
+                                        <option value="1280x720">1280 × 720 (HD)</option>
+                                        <option value="1920x1080" selected>1920 × 1080 (Full HD)</option>
+                                        <option value="2560x1440">2560 × 1440 (2K)</option>
+                                        <option value="3840x2160">3840 × 2160 (4K)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="interval-value">
+                                        <i class="fas fa-clock"></i>
+                                        <span data-i18n="capture.interval">Capture Interval</span>
+                                    </label>
+                                    <div class="interval-input-group">
+                                        <input type="number" id="interval-value" value="30" min="1" max="3600">
+                                        <select id="interval-unit">
+                                            <option value="seconds" data-i18n="capture.interval_seconds">seconds</option>
+                                            <option value="minutes" data-i18n="capture.interval_minutes">minutes</option>
+                                            <option value="hours" data-i18n="capture.interval_hours">hours</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="capture-actions">
+                                    <button class="btn btn-primary btn-large" id="start-capture-btn">
+                                        <i class="fas fa-play"></i>
+                                        <span data-i18n="capture.start_capture">Start Capture</span>
+                                    </button>
+                                    <button class="btn btn-outline btn-large" id="pause-capture-btn" style="display: none;">
+                                        <i class="fas fa-pause"></i>
+                                        <span data-i18n="capture.pause_capture">Pause Capture</span>
+                                    </button>
+                                    <button class="btn btn-outline btn-large" id="stop-capture-btn" style="display: none;">
+                                        <i class="fas fa-stop"></i>
+                                        <span data-i18n="capture.stop_capture">Stop Capture</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-chart-line"></i> <span data-i18n="capture.status">Status</span></h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="capture-stats">
+                                <div class="stat-item">
+                                    <div class="stat-icon"><i class="fas fa-images"></i></div>
+                                    <div class="stat-content">
+                                        <div class="stat-label" data-i18n="capture.images_captured">Images Captured</div>
+                                        <div class="stat-value" id="images-captured-count">0</div>
+                                    </div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-icon"><i class="fas fa-stopwatch"></i></div>
+                                    <div class="stat-content">
+                                        <div class="stat-label" data-i18n="capture.elapsed_time">Elapsed Time</div>
+                                        <div class="stat-value" id="elapsed-time">00:00:00</div>
+                                    </div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                                    <div class="stat-content">
+                                        <div class="stat-label" data-i18n="capture.next_capture">Next Capture</div>
+                                        <div class="stat-value" id="next-capture">--:--</div>
+                                    </div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-icon"><i class="fas fa-video"></i></div>
+                                    <div class="stat-content">
+                                        <div class="stat-label" data-i18n="capture.estimated_video_length">Est. Video Length</div>
+                                        <div class="stat-value" id="estimated-length">0s</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-folder"></i> <span data-i18n="capture.save_location">Save Location</span></h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <div class="path-input-group">
+                                    <input type="text" id="save-location" readonly placeholder="Select save location..." data-i18n-placeholder="placeholder.select_save_location">
+                                    <button class="btn btn-outline" id="browse-save-location">
+                                        <i class="fas fa-folder-open"></i>
+                                        <span data-i18n="capture.browse">Browse</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="storage-options">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="auto-upload-images">
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="capture.auto_upload">Auto Upload to FTP</span>
+                                </label>
+
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="add-watermark">
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="capture.watermark">Add Watermark</span>
+                                </label>
+                            </div>
+
+                            <div class="watermark-settings" id="watermark-settings" style="display: none;">
+                                <div class="form-group">
+                                    <label for="watermark-type">
+                                        <i class="fas fa-layer-group"></i>
+                                        <span data-i18n="capture.watermark_type">Watermark Type</span>
+                                    </label>
+                                    <select id="watermark-type">
+                                        <option value="text" data-i18n="capture.watermark_type_text">Text</option>
+                                        <option value="image" data-i18n="capture.watermark_type_image">Image</option>
+                                    </select>
+                                </div>
+
+                                <div class="watermark-text-settings" id="watermark-text-settings">
+                                    <div class="form-group">
+                                        <label for="watermark-text">
+                                            <i class="fas fa-font"></i>
+                                            <span data-i18n="capture.watermark_text">Watermark Text</span>
+                                        </label>
+                                        <input type="text" id="watermark-text" placeholder="Enter watermark text..." data-i18n-placeholder="placeholder.enter_watermark_text">
+                                    </div>
+                                </div>
+
+                                <div class="watermark-image-settings" id="watermark-image-settings" style="display: none;">
+                                    <div class="form-group">
+                                        <label for="watermark-image-path">
+                                            <i class="fas fa-image"></i>
+                                            <span data-i18n="capture.watermark_image">Watermark Image</span>
+                                        </label>
+                                        <div class="file-input-group">
+                                            <input type="text" id="watermark-image-path" readonly placeholder="No image selected..." data-i18n-placeholder="placeholder.no_image_selected">
+                                            <button type="button" class="btn btn-outline" id="browse-watermark-image">
+                                                <i class="fas fa-folder-open"></i>
+                                                <span data-i18n="capture.watermark_image_browse">Select Image</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="watermark-size">
+                                            <i class="fas fa-expand-arrows-alt"></i>
+                                            <span data-i18n="capture.watermark_size">Size</span>
+                                        </label>
+                                        <select id="watermark-size">
+                                            <option value="small" data-i18n="capture.size_small">Small</option>
+                                            <option value="medium" selected data-i18n="capture.size_medium">Medium</option>
+                                            <option value="large" data-i18n="capture.size_large">Large</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="watermark-opacity">
+                                            <i class="fas fa-adjust"></i>
+                                            <span data-i18n="capture.watermark_opacity">Opacity</span>
+                                        </label>
+                                        <div class="opacity-slider">
+                                            <input type="range" id="watermark-opacity" min="10" max="100" value="80">
+                                            <span id="watermark-opacity-value">80%</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group watermark-position-group">
+                                    <label for="watermark-position">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span data-i18n="capture.watermark_position">Position</span>
+                                    </label>
+                                    <select id="watermark-position">
+                                        <option value="top-left" data-i18n="capture.position_top_left">Top Left</option>
+                                        <option value="top-right" data-i18n="capture.position_top_right">Top Right</option>
+                                        <option value="bottom-left" data-i18n="capture.position_bottom_left">Bottom Left</option>
+                                        <option value="bottom-right" selected data-i18n="capture.position_bottom_right">Bottom Right</option>
+                                        <option value="center" data-i18n="capture.position_center">Center</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="timelapse-tab">
+                    <div class="page-header">
+                        <h2><i class="fas fa-film"></i> <span data-i18n="timelapse.title">Timelapse Videos</span></h2>
+                        <p data-i18n="timelapse.subtitle">Create and manage your timelapse videos</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-plus"></i> <span data-i18n="timelapse.create">Create Timelapse</span></h3>
+                            <div class="timelapse-actions">
+                                <button class="btn btn-primary" id="create-timelapse-btn">
+                                    <i class="fas fa-magic"></i>
+                                    <span data-i18n="timelapse.create">Create Timelapse</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p data-i18n="timelapse.description">Select your captured images and create stunning timelapse videos with music and effects.</p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-list"></i> <span data-i18n="timelapse.your_videos">Your Videos</span></h3>
+                            <div class="video-stats">
+                                <span class="stat-item">
+                                    <span class="stat-label" data-i18n="common.total">Total:</span>
+                                    <span class="stat-value" id="video-count">0</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="video-list" id="video-list">
+                                <div class="empty-state" id="video-empty-state">
+                                    <i class="fas fa-film empty-icon"></i>
+                                    <h3 data-i18n="timelapse.no_videos">No timelapse videos created yet</h3>
+                                    <p data-i18n="timelapse.create_first_video">Create your first timelapse video</p>
+                                    <button class="btn btn-primary" id="create-first-video-btn">
+                                        <i class="fas fa-magic"></i>
+                                        <span data-i18n="timelapse.create">Create Timelapse</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="settings-tab">
+                    <div class="page-header">
+                        <h2><i class="fas fa-cogs"></i> <span data-i18n="settings.title">Settings</span></h2>
+                        <p data-i18n="settings.subtitle">Configure your preferences and connections</p>
+                    </div>
+
+                    <div class="settings-grid">
+                        <div class="card settings-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-camera"></i> <span data-i18n="settings.camera">Camera Settings</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="default-resolution">
+                                        <i class="fas fa-expand-arrows-alt"></i>
+                                        <span data-i18n="settings.default_resolution">Default Resolution</span>
+                                    </label>
+                                    <select id="default-resolution">
+                                        <option value="640x480">640 × 480</option>
+                                        <option value="1280x720">1280 × 720 (HD)</option>
+                                        <option value="1920x1080" selected>1920 × 1080 (Full HD)</option>
+                                        <option value="2560x1440">2560 × 1440 (2K)</option>
+                                        <option value="3840x2160">3840 × 2160 (4K)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="default-interval">
+                                        <i class="fas fa-clock"></i>
+                                        <span data-i18n="settings.default_interval">Default Interval</span>
+                                    </label>
+                                    <select id="default-interval">
+                                        <option value="10">10 seconds</option>
+                                        <option value="30" selected>30 seconds</option>
+                                        <option value="60">1 minute</option>
+                                        <option value="300">5 minutes</option>
+                                        <option value="600">10 minutes</option>
+                                        <option value="3600">1 hour</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="image-format">
+                                        <i class="fas fa-image"></i>
+                                        <span data-i18n="settings.image_format">Image Format</span>
+                                    </label>
+                                    <select id="image-format">
+                                        <option value="jpeg" selected>JPEG</option>
+                                        <option value="png">PNG</option>
+                                        <option value="webp">WebP</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="jpeg-quality">
+                                        <i class="fas fa-adjust"></i>
+                                        <span data-i18n="settings.jpeg_quality">JPEG Quality</span>
+                                    </label>
+                                    <div class="quality-slider">
+                                        <input type="range" id="jpeg-quality" min="50" max="100" value="85">
+                                        <span id="jpeg-quality-value">85%</span>
+                                    </div>
+                                </div>
+
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="auto-start">
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="settings.auto_start">Auto-start capture on launch</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="card settings-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-upload"></i> <span data-i18n="settings.upload">Upload Settings</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="ftp-enabled">
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="settings.upload_enabled">Enable Upload</span>
+                                </label>
+
+                                <div class="ftp-settings" id="ftp-settings-group">
+                                    <div class="form-group">
+                                        <label for="upload-protocol">
+                                            <i class="fas fa-network-wired"></i>
+                                            <span data-i18n="settings.upload_protocol">Protocol</span>
+                                        </label>
+                                        <select id="upload-protocol" class="form-select">
+                                            <option value="ftp" data-i18n="settings.protocol_ftp">FTP</option>
+                                            <option value="sftp" data-i18n="settings.protocol_sftp">SFTP</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="ftp-server">
+                                            <i class="fas fa-server"></i>
+                                            <span data-i18n="settings.upload_server">Server</span>
+                                        </label>
+                                        <input type="text" id="ftp-server" placeholder="ftp.example.com" data-i18n-placeholder="placeholder.upload_server">
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="ftp-port">
+                                                <i class="fas fa-plug"></i>
+                                                <span data-i18n="settings.upload_port">Port</span>
+                                            </label>
+                                            <input type="number" id="ftp-port" value="21" min="1" max="65535">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="ftp-username">
+                                            <i class="fas fa-user"></i>
+                                            <span data-i18n="settings.upload_username">Username</span>
+                                        </label>
+                                        <input type="text" id="ftp-username">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="ftp-password">
+                                            <i class="fas fa-lock"></i>
+                                            <span data-i18n="settings.upload_password">Password</span>
+                                        </label>
+                                        <input type="password" id="ftp-password">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="ftp-directory">
+                                            <i class="fas fa-folder"></i>
+                                            <span data-i18n="settings.upload_directory">Upload Directory</span>
+                                        </label>
+                                        <input type="text" id="ftp-directory" placeholder="/timelapse/" data-i18n-placeholder="placeholder.upload_directory">
+                                    </div>
+
+                                    <div class="form-actions">
+                                        <button class="btn btn-outline" id="test-ftp-btn">
+                                            <i class="fas fa-plug"></i>
+                                            <span data-i18n="settings.upload_test">Test Connection</span>
+                                        </button>
+                                    </div>
+
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="auto-upload-captured">
+                                        <span class="checkbox-custom"></span>
+                                        <span data-i18n="settings.upload_auto_upload_images">Auto-upload captured images</span>
+                                    </label>
+
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="auto-upload-videos">
+                                        <span class="checkbox-custom"></span>
+                                        <span data-i18n="settings.upload_auto_upload_videos">Auto-upload created videos</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card settings-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-hdd"></i> <span data-i18n="settings.storage">Storage Settings</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="storage-location">
+                                        <i class="fas fa-folder"></i>
+                                        <span data-i18n="settings.storage_location">Storage Location</span>
+                                    </label>
+                                    <div class="path-input-group">
+                                        <input type="text" id="storage-location" readonly>
+                                        <button class="btn btn-outline" id="browse-storage-location">
+                                            <i class="fas fa-folder-open"></i>
+                                            <span data-i18n="common.browse">Browse</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="auto-cleanup">
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="settings.auto_cleanup">Auto-cleanup old files</span>
+                                </label>
+
+                                <div class="form-group">
+                                    <label for="cleanup-days">
+                                        <i class="fas fa-calendar-alt"></i>
+                                        <span data-i18n="settings.cleanup_days">Keep files for (days)</span>
+                                    </label>
+                                    <select id="cleanup-days">
+                                        <option value="7">7 days</option>
+                                        <option value="14">14 days</option>
+                                        <option value="30" selected>30 days</option>
+                                        <option value="60">60 days</option>
+                                        <option value="90">90 days</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="max-storage">
+                                        <i class="fas fa-database"></i>
+                                        <span data-i18n="settings.max_storage">Maximum Storage (GB)</span>
+                                    </label>
+                                    <select id="max-storage">
+                                        <option value="5">5 GB</option>
+                                        <option value="10" selected>10 GB</option>
+                                        <option value="25">25 GB</option>
+                                        <option value="50">50 GB</option>
+                                        <option value="100">100 GB</option>
+                                        <option value="0" data-i18n="common.unlimited">Unlimited</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card settings-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-video"></i> <span data-i18n="settings.video">Video Settings</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="default-fps">
+                                        <i class="fas fa-tachometer-alt"></i>
+                                        <span data-i18n="settings.default_fps">Default FPS</span>
+                                    </label>
+                                    <select id="default-fps">
+                                        <option value="12">12 FPS</option>
+                                        <option value="24">24 FPS</option>
+                                        <option value="30" selected>30 FPS</option>
+                                        <option value="60">60 FPS</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="default-video-quality">
+                                        <i class="fas fa-adjust"></i>
+                                        <span data-i18n="settings.default_quality">Default Quality</span>
+                                    </label>
+                                    <select id="default-video-quality">
+                                        <option value="low" data-i18n="timelapse.quality_low">Low</option>
+                                        <option value="medium" data-i18n="timelapse.quality_medium">Medium</option>
+                                        <option value="high" selected data-i18n="timelapse.quality_high">High</option>
+                                        <option value="ultra" data-i18n="timelapse.quality_ultra">Ultra</option>
+                                    </select>
+                                </div>
+
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="hardware-acceleration" checked>
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="settings.hardware_acceleration">Hardware Acceleration</span>
+                                </label>
+
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="preserve-aspect-ratio" checked>
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="settings.preserve_aspect_ratio">Preserve Aspect Ratio</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="card settings-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-clock"></i> <span data-i18n="settings.auto_timelapse">Auto Timelapse</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="auto-timelapse-enabled">
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="settings.auto_timelapse_enabled">Enable automatic timelapse creation</span>
+                                </label>
+
+                                <div class="auto-timelapse-settings" id="auto-timelapse-settings" style="display: none;">
+                                    <div class="form-group">
+                                        <label for="auto-timelapse-interval">
+                                            <i class="fas fa-history"></i>
+                                            <span data-i18n="settings.auto_timelapse_interval">Create timelapse every</span>
+                                        </label>
+                                        <select id="auto-timelapse-interval">
+                                            <option value="24" selected>24 hours</option>
+                                            <option value="48">48 hours</option>
+                                            <option value="72">72 hours</option>
+                                            <option value="168">7 days</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="auto-timelapse-mode">
+                                            <i class="fas fa-sync"></i>
+                                            <span data-i18n="settings.auto_timelapse_mode">File mode</span>
+                                        </label>
+                                        <select id="auto-timelapse-mode">
+                                            <option value="replace" selected data-i18n="settings.auto_timelapse_replace">Replace previous file</option>
+                                            <option value="new" data-i18n="settings.auto_timelapse_new">Create new file each time</option>
+                                        </select>
+                                    </div>
+
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="auto-timelapse-upload" checked>
+                                        <span class="checkbox-custom"></span>
+                                        <span data-i18n="settings.auto_timelapse_upload">Auto-upload</span>
+                                    </label>
+
+                                    <div class="form-group">
+                                        <label for="auto-timelapse-fps">
+                                            <i class="fas fa-tachometer-alt"></i>
+                                            <span data-i18n="settings.auto_timelapse_fps">FPS</span>
+                                        </label>
+                                        <select id="auto-timelapse-fps">
+                                            <option value="12">12 FPS</option>
+                                            <option value="24">24 FPS</option>
+                                            <option value="30" selected>30 FPS</option>
+                                            <option value="60">60 FPS</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="auto-timelapse-quality">
+                                            <i class="fas fa-sliders-h"></i>
+                                            <span data-i18n="settings.auto_timelapse_quality">Quality</span>
+                                        </label>
+                                        <select id="auto-timelapse-quality">
+                                            <option value="low" data-i18n="timelapse.quality_low">Low</option>
+                                            <option value="medium" data-i18n="timelapse.quality_medium">Medium</option>
+                                            <option value="high" selected data-i18n="timelapse.quality_high">High</option>
+                                            <option value="ultra" data-i18n="timelapse.quality_ultra">Ultra</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card settings-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-bell"></i> <span data-i18n="settings.notifications">Notifications</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="show-notifications" checked>
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="settings.show_notifications">Show notifications</span>
+                                </label>
+
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sound-notifications">
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="settings.sound_notifications">Sound notifications</span>
+                                </label>
+
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="notify-capture-start" checked>
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="settings.notify_capture_start">Notify on capture start</span>
+                                </label>
+
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="notify-capture-complete" checked>
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="settings.notify_capture_complete">Notify on capture complete</span>
+                                </label>
+
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="notify-video-complete" checked>
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="settings.notify_video_complete">Notify on video complete</span>
+                                </label>
+
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="notify-upload-complete" checked>
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="settings.notify_upload_complete">Notify on upload complete</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="help-tab">
+                    <div class="page-header">
+                        <h2><i class="fas fa-question-circle"></i> <span data-i18n="help.title">Help & Documentation</span></h2>
+                        <p data-i18n="help.subtitle">Learn how to create amazing timelapse videos</p>
+                    </div>
+
+                    <div class="help-grid">
+                        <div class="card help-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-rocket"></i> <span data-i18n="help.getting_started">Getting Started</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="help-steps">
+                                    <div class="help-step">
+                                        <span data-i18n="help.step1">1. Connect your webcam and select it from the camera dropdown</span>
+                                    </div>
+                                    <div class="help-step">
+                                        <span data-i18n="help.step2">2. Choose resolution, capture interval, and watermark settings</span>
+                                    </div>
+                                    <div class="help-step">
+                                        <span data-i18n="help.step3">3. Set save location and configure FTP for automatic uploads</span>
+                                    </div>
+                                    <div class="help-step">
+                                        <span data-i18n="help.step4">4. Click "Start Capture" to begin automated photo capture</span>
+                                    </div>
+                                    <div class="help-step">
+                                        <span data-i18n="help.step5">5. Create timelapse videos with effects and music in the Timelapse tab</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card help-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-star"></i> <span data-i18n="help.key_features">Key Features</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="feature-list">
+                                    <div class="feature-item" data-i18n="help.feature1">Automated webcam capture with intervals from 1 second to hours</div>
+                                    <div class="feature-item" data-i18n="help.feature2">Auto-timelapse creation every 24/48/72 hours or weekly</div>
+                                    <div class="feature-item" data-i18n="help.feature3">Professional video creation with fade, zoom, and pan effects</div>
+                                    <div class="feature-item" data-i18n="help.feature4">Text and image watermarks with adjustable position and opacity</div>
+                                    <div class="feature-item" data-i18n="help.feature5">Background music support with volume control</div>
+                                    <div class="feature-item" data-i18n="help.feature6">Hardware-accelerated encoding and auto-start on app launch</div>
+                                    <div class="feature-item" data-i18n="help.feature7">Storage management with auto-cleanup and size limits</div>
+                                    <div class="feature-item" data-i18n="help.feature8">FTP/SFTP upload support for automated file transfer</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card help-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-lightbulb"></i> <span data-i18n="help.tips">Tips & Tricks</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="tips-grid">
+                                    <div class="tip-card">
+                                        <div class="tip-icon">
+                                            <i class="fas fa-magic"></i>
+                                        </div>
+                                        <div class="tip-content">
+                                            <h5 data-i18n="help.tip1">Auto-Timelapse:</h5>
+                                            <p data-i18n="help.tip1_desc">Enable auto-timelapse to automatically create and upload videos every 24-72 hours using recent captures.</p>
+                                        </div>
+                                    </div>
+                                    <div class="tip-card">
+                                        <div class="tip-icon">
+                                            <i class="fas fa-clock"></i>
+                                        </div>
+                                        <div class="tip-content">
+                                            <h5 data-i18n="help.tip2">Interval Selection:</h5>
+                                            <p data-i18n="help.tip2_desc">Clouds: 10-30s | Plants: 15-60min | Construction: 5-15min | Stars: 20-30s</p>
+                                        </div>
+                                    </div>
+                                    <div class="tip-card">
+                                        <div class="tip-icon">
+                                            <i class="fas fa-hdd"></i>
+                                        </div>
+                                        <div class="tip-content">
+                                            <h5 data-i18n="help.tip3">Storage Management:</h5>
+                                            <p data-i18n="help.tip3_desc">Set storage limits and auto-cleanup days. The app will automatically delete old files to maintain space.</p>
+                                        </div>
+                                    </div>
+                                    <div class="tip-card">
+                                        <div class="tip-icon">
+                                            <i class="fas fa-cloud-upload-alt"></i>
+                                        </div>
+                                        <div class="tip-content">
+                                            <h5 data-i18n="help.tip4">FTP/SFTP Best Practices:</h5>
+                                            <p data-i18n="help.tip4_desc">Enable auto-upload for images and videos. Use SFTP for secure transfers. Test connection before long captures. Use dedicated directories.</p>
+                                        </div>
+                                    </div>
+                                    <div class="tip-card">
+                                        <div class="tip-icon">
+                                            <i class="fas fa-film"></i>
+                                        </div>
+                                        <div class="tip-content">
+                                            <h5 data-i18n="help.tip5">Video Effects:</h5>
+                                            <p data-i18n="help.tip5_desc">Combine fade transitions with zoom or pan effects for professional results. Adjust FPS for smooth playback.</p>
+                                        </div>
+                                    </div>
+                                    <div class="tip-card">
+                                        <div class="tip-icon">
+                                            <i class="fas fa-tachometer-alt"></i>
+                                        </div>
+                                        <div class="tip-content">
+                                            <h5 data-i18n="help.tip6">Performance Tips:</h5>
+                                            <p data-i18n="help.tip6_desc">Enable hardware acceleration for faster encoding. Higher quality settings require more processing time.</p>
+                                        </div>
+                                    </div>
+                                    <div class="tip-card">
+                                        <div class="tip-icon">
+                                            <i class="fas fa-cogs"></i>
+                                        </div>
+                                        <div class="tip-content">
+                                            <h5 data-i18n="help.tip7">System Integration:</h5>
+                                            <p data-i18n="help.tip7_desc">Enable notifications to stay informed. Use auto-start to begin capture on app launch. Camera stays active when minimized.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card help-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-file-image"></i> <span data-i18n="help.supported_formats">Supported Formats</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="format-support">
+                                    <div class="support-section">
+                                        <h4 data-i18n="help.video_formats">Video Formats:</h4>
+                                        <div class="format-tags">
+                                            <span class="format-tag">MP4</span>
+                                            <span class="format-tag">AVI</span>
+                                            <span class="format-tag">MOV</span>
+                                            <span class="format-tag">WebM</span>
+                                        </div>
+                                    </div>
+                                    <div class="support-section">
+                                        <h4 data-i18n="help.image_formats">Image Formats:</h4>
+                                        <div class="format-tags">
+                                            <span class="format-tag">JPEG</span>
+                                            <span class="format-tag">PNG</span>
+                                            <span class="format-tag">WebP</span>
+                                            <span class="format-tag">BMP</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="format-notes">
+                                    <h4 data-i18n="help.format_notes">Format Recommendations:</h4>
+                                    <div class="feature-list">
+                                        <div class="feature-item" data-i18n="help.format_note1">MP4 provides universal compatibility with excellent compression</div>
+                                        <div class="feature-item" data-i18n="help.format_note2">WebM offers superior quality for web playback</div>
+                                        <div class="feature-item" data-i18n="help.format_note3">JPEG is ideal for webcam captures with adjustable quality (50-100%)</div>
+                                        <div class="feature-item" data-i18n="help.format_note4">PNG preserves quality for watermarks and graphics</div>
+                                        <div class="feature-item" data-i18n="help.format_note5">WebP offers modern compression for high-quality captures</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card help-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-tools"></i> <span data-i18n="help.troubleshooting">Troubleshooting</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="settings-help">
+                                    <div class="setting-item">
+                                        <h5 data-i18n="help.trouble_camera">Camera Not Detected:</h5>
+                                        <p data-i18n="help.trouble_camera_desc">Check camera connections and permissions. Restart the app or try a different USB port.</p>
+                                    </div>
+
+                                    <div class="setting-item">
+                                        <h5 data-i18n="help.trouble_storage">Storage Space:</h5>
+                                        <p data-i18n="help.trouble_storage_desc">Monitor available disk space. Enable auto-cleanup to manage storage automatically.</p>
+                                    </div>
+
+                                    <div class="setting-item">
+                                        <h5 data-i18n="help.trouble_ftp">FTP/SFTP Connection:</h5>
+                                        <p data-i18n="help.trouble_ftp_desc">Verify server credentials and network connectivity. For SFTP, ensure port 22 is used. Test connection before starting captures.</p>
+                                    </div>
+
+                                    <div class="setting-item">
+                                        <h5 data-i18n="help.trouble_performance">Performance Issues:</h5>
+                                        <p data-i18n="help.trouble_performance_desc">Enable hardware acceleration and close unnecessary applications. Lower capture resolution if needed.</p>
+                                    </div>
+
+                                    <div class="setting-item">
+                                        <h5 data-i18n="help.trouble_timelapse">Timelapse Creation:</h5>
+                                        <p data-i18n="help.trouble_timelapse_desc">Ensure images are in the same directory. Check available disk space before creating large videos.</p>
+                                    </div>
+
+                                    <div class="setting-item">
+                                        <h5 data-i18n="help.performance_tips_title">Performance Tips:</h5>
+                                        <p data-i18n="help.performance_tips_desc">Use lower resolution for long captures. Enable hardware acceleration for faster video creation. Close other applications during heavy processing. Consider SSD storage for better performance.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card help-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-keyboard"></i> <span data-i18n="help.keyboard_shortcuts">Keyboard Shortcuts</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="shortcuts-list">
+                                    <div class="shortcut-item">
+                                        <kbd>Space</kbd>
+                                        <span data-i18n="help.shortcut_capture">Start/Stop capture</span>
+                                    </div>
+                                    <div class="shortcut-item">
+                                        <kbd>Ctrl</kbd> + <kbd>T</kbd>
+                                        <span data-i18n="help.shortcut_timelapse">Open timelapse creator</span>
+                                    </div>
+                                    <div class="shortcut-item">
+                                        <kbd>Ctrl</kbd> + <kbd>,</kbd>
+                                        <span data-i18n="help.shortcut_settings">Open settings</span>
+                                    </div>
+                                    <div class="shortcut-item">
+                                        <kbd>F1</kbd>
+                                        <span data-i18n="help.shortcut_help">Show help</span>
+                                    </div>
+                                    <div class="shortcut-item">
+                                        <kbd>Escape</kbd>
+                                        <span data-i18n="help.shortcut_close">Close dialogs</span>
+                                    </div>
+                                    <div class="shortcut-item">
+                                        <kbd>Ctrl</kbd> + <kbd>R</kbd>
+                                        <span data-i18n="help.shortcut_refresh">Refresh camera list</span>
+                                    </div>
+                                    <div class="shortcut-item">
+                                        <kbd>Ctrl</kbd> + <kbd>U</kbd>
+                                        <span data-i18n="help.shortcut_check_updates">Check for updates</span>
+                                    </div>
+                                    <div class="shortcut-item">
+                                        <kbd>Ctrl</kbd> + <kbd>O</kbd>
+                                        <span data-i18n="help.shortcut_open_folder">Open output folder</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card help-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-info-circle"></i> <span data-i18n="help.about">About</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="about-info">
+                                    <div class="app-info">
+                                        <img src="assets/logo.svg" alt="Timelapse Webcam" class="about-logo">
+                                        <h4 data-i18n="app.title">Timelapse Webcam</h4>
+                                        <p data-i18n="help.version_info">Version 1.0.0 - Built with Electron, FFmpeg, and modern web technologies</p>
+                                        <p data-i18n="help.description">Professional webcam timelapse creation and monitoring software</p>
+                                    </div>
+                                    <div class="credits">
+                                        <p data-i18n="help.built_with">Built by Bavamont (www.bavamont.com)</p>
+                                        <p data-i18n="help.powered_by">Powered by FFmpeg for high-quality video processing</p>
+                                        <p data-i18n="help.auto_updates">Automatic updates ensure you always have the latest features</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card help-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-sync-alt"></i> <span data-i18n="updater.title">App Updater</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="update-section">
+                                    <div class="update-description">
+                                        <p data-i18n="help.updater_desc">Keep your Timelapse Webcam application up to date with the latest features and improvements. Updates are delivered automatically through GitHub releases.</p>
+                                    </div>
+                                    
+                                    <div class="update-info">
+                                        <div class="form-group">
+                                            <label><i class="fas fa-tag"></i> <span data-i18n="updater.current_version">Current Version:</span></label>
+                                            <div class="version-display" id="current-version">1.0.0</div>
+                                        </div>
+
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="auto-check-updates" checked>
+                                            <span class="checkbox-custom"></span>
+                                            <span data-i18n="updater.auto_check">Check for updates automatically</span>
+                                        </label>
+
+                                        <div class="update-actions">
+                                            <button class="btn btn-outline" id="manual-check-updates">
+                                                <i class="fas fa-sync-alt"></i>
+                                                <span data-i18n="updater.check_updates">Check for Updates</span>
+                                            </button>
+                                        </div>
+
+                                        <div class="update-status" id="update-status"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="toast-container" class="toast-container"></div>
+
+        <div id="timelapse-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-magic"></i> <span data-i18n="timelapse.create">Create Timelapse</span></h3>
+                </div>
+                <div class="modal-body">
+                    <form id="timelapse-form">
+                        <div class="form-group">
+                            <label for="timelapse-images">
+                                <i class="fas fa-images"></i>
+                                <span data-i18n="timelapse.select_images">Select Images</span>
+                            </label>
+                            <div class="file-input-group">
+                                <input type="text" id="timelapse-images" readonly placeholder="No images selected..." data-i18n-placeholder="placeholder.no_images_selected">
+                                <button type="button" class="btn btn-outline" id="browse-images-btn">
+                                    <i class="fas fa-folder-open"></i>
+                                    <span data-i18n="common.browse">Browse</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="timelapse-output-name">
+                                <i class="fas fa-file-video"></i>
+                                <span data-i18n="timelapse.output_name">Output Name</span>
+                            </label>
+                            <input type="text" id="timelapse-output-name" placeholder="timelapse_video" data-i18n-placeholder="placeholder.output_name">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="timelapse-fps">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                    <span data-i18n="timelapse.fps">Frames Per Second</span>
+                                </label>
+                                <select id="timelapse-fps">
+                                    <option value="12">12 FPS</option>
+                                    <option value="24">24 FPS</option>
+                                    <option value="30" selected>30 FPS</option>
+                                    <option value="60">60 FPS</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="timelapse-quality">
+                                    <i class="fas fa-adjust"></i>
+                                    <span data-i18n="timelapse.quality">Quality</span>
+                                </label>
+                                <select id="timelapse-quality">
+                                    <option value="low" data-i18n="timelapse.quality_low">Low</option>
+                                    <option value="medium" data-i18n="timelapse.quality_medium">Medium</option>
+                                    <option value="high" selected data-i18n="timelapse.quality_high">High</option>
+                                    <option value="ultra" data-i18n="timelapse.quality_ultra">Ultra</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="add-music">
+                            <span class="checkbox-custom"></span>
+                            <span data-i18n="timelapse.add_music">Add Background Music</span>
+                        </label>
+
+                        <div class="music-settings" id="music-settings" style="display: none;">
+                            <div class="form-group">
+                                <label for="music-file">
+                                    <i class="fas fa-music"></i>
+                                    <span data-i18n="timelapse.music_file">Music File</span>
+                                </label>
+                                <div class="file-input-group">
+                                    <input type="text" id="music-file" readonly placeholder="No music file selected..." data-i18n-placeholder="placeholder.no_music_selected">
+                                    <button type="button" class="btn btn-outline" id="browse-music-btn">
+                                        <i class="fas fa-folder-open"></i>
+                                        <span data-i18n="common.browse">Browse</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="music-volume">
+                                    <i class="fas fa-volume-up"></i>
+                                    <span data-i18n="timelapse.music_volume">Music Volume</span>
+                                </label>
+                                <div class="volume-slider">
+                                    <input type="range" id="music-volume" min="0" max="100" value="50">
+                                    <span id="music-volume-value">50%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="video-effects">
+                                <i class="fas fa-magic"></i>
+                                <span data-i18n="timelapse.video_effects">Video Effects</span>
+                            </label>
+                            <select id="video-effects">
+                                <option value="none" data-i18n="timelapse.effect_none">None</option>
+                                <option value="fade" data-i18n="timelapse.effect_fade">Fade In/Out</option>
+                                <option value="zoom" data-i18n="timelapse.effect_zoom">Zoom Effect</option>
+                                <option value="pan" data-i18n="timelapse.effect_pan">Pan Effect</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" id="timelapse-modal-cancel">
+                        <span data-i18n="common.cancel">Cancel</span>
+                    </button>
+                    <button class="btn btn-primary" id="timelapse-modal-create">
+                        <i class="fas fa-magic"></i>
+                        <span data-i18n="timelapse.create_video">Create Video</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="progress-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-cog fa-spin"></i> <span data-i18n="timelapse.creating">Creating Video...</span></h3>
+                </div>
+                <div class="modal-body">
+                    <div class="progress-container">
+                        <div class="progress-info">
+                            <span data-i18n="timelapse.progress">Progress:</span>
+                            <span id="creation-progress-percentage">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="creation-progress-fill"></div>
+                        </div>
+                        <div class="progress-details">
+                            <div class="progress-detail">
+                                <span data-i18n="progress.status">Status:</span>
+                                <span id="creation-status" data-i18n="progress.preparing">Preparing...</span>
+                            </div>
+                            <div class="progress-detail">
+                                <span data-i18n="progress.frames_processed">Frames processed:</span>
+                                <span id="frames-processed">0 / 0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="delete-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-exclamation-triangle"></i> <span data-i18n="dialog.confirm_delete">Confirm Delete</span></h3>
+                </div>
+                <div class="modal-body">
+                    <div class="delete-warning">
+                        <div class="warning-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="delete-message">
+                            <p id="delete-message" data-i18n="dialog.delete_video_confirm">Are you sure you want to delete this video? This action cannot be undone.</p>
+                            <div class="delete-item-info">
+                                <div class="delete-item-label" data-i18n="dialog.video_name">Video Name:</div>
+                                <div class="delete-item-name" id="delete-item-name"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" id="delete-modal-cancel">
+                        <span data-i18n="common.cancel">Cancel</span>
+                    </button>
+                    <button class="btn btn-primary" id="delete-modal-confirm">
+                        <i class="fas fa-trash"></i>
+                        <span data-i18n="common.delete">Delete</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="update-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-download"></i> <span data-i18n="updater.available">Update Available</span></h3>
+                </div>
+                <div class="modal-body">
+                    <div class="update-details">
+                        <div class="version-info">
+                            <div class="version-item">
+                                <span data-i18n="updater.current_version">Current Version:</span>
+                                <span id="modal-current-version">1.0.0</span>
+                            </div>
+                            <div class="version-item">
+                                <span data-i18n="updater.new_version">New Version:</span>
+                                <span id="modal-new-version">1.0.1</span>
+                            </div>
+                        </div>
+
+                        <div class="release-notes" id="release-notes">
+                            <h4 data-i18n="updater.release_notes">Release Notes</h4>
+                            <div id="release-notes-content"></div>
+                        </div>
+
+                        <div class="download-progress" id="download-progress" style="display: none;">
+                            <div class="progress-info">
+                                <span data-i18n="updater.download_progress">Download Progress:</span>
+                                <span id="download-percentage">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="download-progress-fill"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" id="skip-update">
+                        <span data-i18n="updater.skip_version">Skip This Version</span>
+                    </button>
+                    <button class="btn btn-outline" id="install-later">
+                        <span data-i18n="updater.install_later">Install Later</span>
+                    </button>
+                    <button class="btn btn-primary" id="install-update">
+                        <i class="fas fa-download"></i>
+                        <span data-i18n="updater.install_now">Install Now</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="i18n.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html>
