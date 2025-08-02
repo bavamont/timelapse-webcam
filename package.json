@@ -84,6 +84,7 @@
     },
     "files": [
       "main.js",
+      "preload.js",
       "renderer.js",
       "index.html",
       "styles.css",
@@ -220,6 +221,13 @@
     "portable": {
       "artifactName": "${productName}-${version}-portable.exe"
     },
+    "asarUnpack": [
+      "node_modules/sharp/**/*",
+      "node_modules/@img/**/*",
+      "node_modules/ssh2/**/*",
+      "node_modules/cpu-features/**/*",
+      "node_modules/ssh2-sftp-client/**/*"
+    ],
     "compression": "maximum",
     "publish": [
       {

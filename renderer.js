@@ -1,10 +1,29 @@
-const ipcRenderer = window.electronAPI || (() => {
-    try {
-        return require('electron').ipcRenderer;
-    } catch (e) {
-        return null;
+const ipcRenderer = (() => {
+    if (window.electronAPI) {
+        return {
+            invoke: window.electronAPI.invoke,
+            on: window.electronAPI.on,
+            removeAllListeners: window.electronAPI.removeAllListeners
+        };
+    } else {
+        try {
+            return require('electron').ipcRenderer;
+        } catch (e) {
+            return null;
+        }
     }
 })();
+
+async function safeInvoke(channel, ...args) {
+    if (!ipcRenderer) {
+        throw new Error('IPC communication not available');
+    }
+    try {
+        return await ipcRenderer.invoke(channel, ...args);
+    } catch (error) {
+        throw error;
+    }
+}
 
 let currentStream = null;
 let isInitializing = true;
@@ -194,6 +213,15 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function initializeApp() {
+    if (!ipcRenderer) {
+        if (typeof showToast === 'function') {
+            showToast('Critical Error: Unable to communicate with the main process. Please restart the application.', 'error');
+        } else {
+            alert('Critical Error: Unable to communicate with the main process. Please restart the application.');
+        }
+        return;
+    }
+    
     setupEventListeners();
     setupWindowControls();
     setupUpdateEventListeners();
@@ -336,17 +364,36 @@ function setupUpdateEventListeners() {
 }
 
 function setupWindowControls() {
-    if (elements.minimizeBtn) elements.minimizeBtn.addEventListener('click', function() {
-        ipcRenderer.invoke('window-minimize');
-    });
+    
+    if (elements.minimizeBtn) {
+        elements.minimizeBtn.addEventListener('click', async function() {
+            try {
+                await ipcRenderer.invoke('window-minimize');
+            } catch (error) {
+            }
+        });
+    } else {
+    }
 
-    if (elements.maximizeBtn) elements.maximizeBtn.addEventListener('click', function() {
-        ipcRenderer.invoke('window-maximize');
-    });
+    if (elements.maximizeBtn) {
+        elements.maximizeBtn.addEventListener('click', async function() {
+            try {
+                await ipcRenderer.invoke('window-maximize');
+            } catch (error) {
+            }
+        });
+    } else {
+    }
 
-    if (elements.closeBtn) elements.closeBtn.addEventListener('click', function() {
-        ipcRenderer.invoke('window-close');
-    });
+    if (elements.closeBtn) {
+        elements.closeBtn.addEventListener('click', async function() {
+            try {
+                await ipcRenderer.invoke('window-close');
+            } catch (error) {
+            }
+        });
+    } else {
+    }
 }
 
 function setupSettingsEventListeners() {
@@ -1595,8 +1642,8 @@ function showToast(message, type) {
 function sendNotification(message, type) {
     const options = {
         body: message,
-        icon: 'assets/icon.png',
-        badge: 'assets/icon.png',
+        icon: './assets/icon.png',
+        badge: './assets/icon.png',
         silent: !appState.settings.notifications?.sound
     };
     

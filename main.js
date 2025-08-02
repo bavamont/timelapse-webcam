@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, desktopCapturer, protocol } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs').promises;
@@ -102,7 +102,7 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            webSecurity: true,
+            webSecurity: false,
             preload: path.join(__dirname, 'preload.js')
         },
         icon: getIconPath(),
@@ -114,7 +114,8 @@ function createWindow() {
     });
 
     mainWindow.setMenu(null);
-    mainWindow.loadFile('index.html');
+    
+    mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
     mainWindow.once('ready-to-show', function() {
         mainWindow.show();
