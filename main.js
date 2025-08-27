@@ -16,6 +16,9 @@ let captureInterval = null;
 let captureStartTime = null;
 let imageCount = 0;
 let isPaused = false;
+let motionDetectionEnabled = false;
+let lastMotionTime = null;
+let previousImageBuffer = null;
 let updateCheckInProgress = false;
 let cleanupInterval = null;
 let autoTimelapseInterval = null;
@@ -85,6 +88,27 @@ const store = new Store({
             fps: 30,
             quality: 'high',
             lastRun: null
+        },
+        motionDetection: {
+            enabled: false,
+            sensitivity: 50,
+            threshold: 10,
+            cooldown: 5000,
+            onlyCapture: false,
+            noiseFilter: 15,
+            zones: [],
+            algorithm: 'pixelDiff'
+        },
+        scheduling: {
+            enabled: false,
+            startTime: '08:00',
+            endTime: '18:00',
+            days: [1, 2, 3, 4, 5],
+            timezone: 'local',
+            cronPatterns: [],
+            seasonalRules: [],
+            exceptions: [],
+            advancedMode: false
         }
     }
 });
@@ -93,6 +117,9 @@ autoUpdater.checkForUpdatesAndNotify = false;
 autoUpdater.autoDownload = false;
 autoUpdater.allowPrerelease = false;
 
+/**
+ * Creates the main application window with specified configuration
+ */
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1400,
@@ -102,7 +129,7 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            webSecurity: false,
+            webSecurity: true,
             preload: path.join(__dirname, 'preload.js')
         },
         icon: getIconPath(),
@@ -131,6 +158,7 @@ function createWindow() {
         
         setupCleanupScheduler();
         setupAutoTimelapseScheduler();
+        setupSmartSchedulingChecker();
     });
 
     mainWindow.on('closed', function() {
@@ -144,6 +172,10 @@ function createWindow() {
     });
 }
 
+/**
+ * Returns the appropriate icon path for the current platform
+ * @returns {string} Path to the icon file
+ */
 function getIconPath() {
     const iconPaths = {
         win32: 'assets/icon.ico',
@@ -155,6 +187,10 @@ function getIconPath() {
     return path.join(__dirname, iconPath);
 }
 
+/**
+ * Ensures a directory exists, creating it if necessary
+ * @param {string} dirPath - Directory path to ensure
+ */
 async function ensureDirectoryExists(dirPath) {
     try {
         await fs.access(dirPath);
@@ -167,6 +203,9 @@ async function ensureDirectoryExists(dirPath) {
     }
 }
 
+/**
+ * Checks if FFmpeg is available on the system
+ */
 function checkFFmpegAvailability() {
     try {
         execSync('ffmpeg -version', { stdio: 'ignore' });
@@ -230,6 +269,9 @@ autoUpdater.on('update-downloaded', function(info) {
     }
 });
 
+/**
+ * Automatically checks for application updates if enabled
+ */
 async function checkForUpdatesAutomatically() {
     if (updateCheckInProgress) return;
     
@@ -364,7 +406,8 @@ ipcMain.handle('get-cameras', async function() {
                     const videoDevices = devices.filter(device => device.kind === 'videoinput');
                     return videoDevices.map(device => ({
                         deviceId: device.deviceId,
-                        label: device.label || 'Camera ' + (videoDevices.indexOf(device) + 1)
+                        label: device.label || 'Camera ' + (videoDevices.indexOf(device) + 1),
+                        type: 'camera'
                     }));
                 } catch (error) {
                     return [];
@@ -381,10 +424,38 @@ ipcMain.handle('get-cameras', async function() {
     }
 });
 
+ipcMain.handle('get-screen-sources', async function() {
+    try {
+        const { desktopCapturer } = require('electron');
+        const sources = await desktopCapturer.getSources({
+            types: ['screen', 'window'],
+            thumbnailSize: { width: 150, height: 150 }
+        });
+
+        const screenSources = sources.map(source => ({
+            id: source.id,
+            name: source.name,
+            thumbnail: source.thumbnail.toDataURL(),
+            type: source.id.startsWith('screen') ? 'screen' : 'window'
+        }));
+
+        return {
+            success: true,
+            sources: screenSources
+        };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
 ipcMain.handle('start-capture', async function(event, settings) {
     try {
         if (captureInterval) {
             return { success: false, error: 'error.capture_already_running' };
+        }
+
+        if (!settings.bypassScheduling && !shouldCaptureBeActive()) {
+            return { success: false, error: 'error.capture_outside_schedule' };
         }
 
         const storageLocation = store.get('storageSettings.location');
@@ -452,6 +523,9 @@ ipcMain.handle('resume-capture', async function() {
     }
 });
 
+/**
+ * Stops the current image capture process
+ */
 function stopCapture() {
     if (captureInterval) {
         clearInterval(captureInterval);
@@ -462,6 +536,9 @@ function stopCapture() {
     isPaused = false;
 }
 
+/**
+ * Sets up the automatic file cleanup scheduler
+ */
 function setupCleanupScheduler() {
     if (cleanupInterval) {
         clearInterval(cleanupInterval);
@@ -488,6 +565,9 @@ function setupCleanupScheduler() {
     cleanupInterval = setInterval(runCleanup, 24 * 60 * 60 * 1000);
 }
 
+/**
+ * Sets up the automatic timelapse creation scheduler
+ */
 function setupAutoTimelapseScheduler() {
     if (autoTimelapseInterval) {
         clearInterval(autoTimelapseInterval);
@@ -518,6 +598,9 @@ function setupAutoTimelapseScheduler() {
     autoTimelapseInterval = setInterval(runAutoTimelapse, 60 * 60 * 1000);
 }
 
+/**
+ * Creates an automatic timelapse from recent images
+ */
 async function createAutoTimelapse() {
     const storageLocation = store.get('storageSettings.location');
     const imagesDir = path.join(storageLocation, 'images');
@@ -594,6 +677,120 @@ async function createAutoTimelapse() {
     }
 }
 
+/**
+ * Checks if capture should be active based on smart scheduling settings
+ * @returns {boolean} - Whether capture should be active
+ */
+function shouldCaptureBeActive() {
+    const schedulingSettings = store.get('scheduling');
+    if (!schedulingSettings.enabled) {
+        return true;
+    }
+
+    const now = new Date();
+    const currentDay = now.getDay();
+    const currentTime = now.getHours() * 100 + now.getMinutes();
+    const currentDate = now.toISOString().split('T')[0];
+    const currentMonth = now.getMonth() + 1;
+
+    if (schedulingSettings.exceptions && schedulingSettings.exceptions.length > 0) {
+        const exception = schedulingSettings.exceptions.find(ex => {
+            if (ex.date && ex.date === currentDate) return true;
+            if (ex.dateRange && currentDate >= ex.dateRange[0] && currentDate <= ex.dateRange[1]) return true;
+            return false;
+        });
+        if (exception && exception.action === 'skip') return false;
+    }
+
+    if (schedulingSettings.seasonalRules && schedulingSettings.seasonalRules.length > 0) {
+        const seasonalRule = schedulingSettings.seasonalRules.find(rule => 
+            rule.months.includes(currentMonth)
+        );
+        if (seasonalRule) {
+            const seasonalStartTime = parseInt(seasonalRule.startTime.replace(':', ''));
+            const seasonalEndTime = parseInt(seasonalRule.endTime.replace(':', ''));
+            
+            if (seasonalStartTime <= seasonalEndTime) {
+                return currentTime >= seasonalStartTime && currentTime <= seasonalEndTime && schedulingSettings.days.includes(currentDay);
+            } else {
+                return (currentTime >= seasonalStartTime || currentTime <= seasonalEndTime) && schedulingSettings.days.includes(currentDay);
+            }
+        }
+    }
+
+    if (schedulingSettings.advancedMode && schedulingSettings.cronPatterns && schedulingSettings.cronPatterns.length > 0) {
+        const cron = require('node-cron');
+        
+        return schedulingSettings.cronPatterns.some(pattern => {
+            try {
+                if (!cron.validate(pattern)) return false;
+                
+                const cronParts = pattern.trim().split(/\s+/);
+                if (cronParts.length < 5) return false;
+                
+                const [second, minute, hour, dayOfMonth, month, dayOfWeek] = cronParts;
+                
+                const currentHour = now.getHours();
+                const currentMinute = now.getMinutes();
+                
+                if (hour === '*' || hour === currentHour.toString() || 
+                    (hour.includes('/') && currentHour % parseInt(hour.split('/')[1]) === 0) ||
+                    (hour.includes('-') && currentHour >= parseInt(hour.split('-')[0]) && currentHour <= parseInt(hour.split('-')[1]))) {
+                    return true;
+                }
+                
+                return false;
+            } catch (error) {
+                return false;
+            }
+        });
+    }
+
+    if (!schedulingSettings.days.includes(currentDay)) {
+        return false;
+    }
+
+    const startTime = parseInt(schedulingSettings.startTime.replace(':', ''));
+    const endTime = parseInt(schedulingSettings.endTime.replace(':', ''));
+
+    if (startTime <= endTime) {
+        return currentTime >= startTime && currentTime <= endTime;
+    } else {
+        return currentTime >= startTime || currentTime <= endTime;
+    }
+}
+
+/**
+ * Sets up smart scheduling checker that runs every minute
+ */
+function setupSmartSchedulingChecker() {
+    const checkSchedule = () => {
+        const schedulingSettings = store.get('scheduling');
+        if (!schedulingSettings.enabled) {
+            return;
+        }
+
+        const shouldBeActive = shouldCaptureBeActive();
+        
+        if (captureInterval && !shouldBeActive) {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('auto-stop-capture', { reason: 'schedule' });
+            }
+        } else if (!captureInterval && shouldBeActive && motionDetectionEnabled) {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('auto-start-capture', { reason: 'schedule' });
+            }
+        }
+    };
+
+    setInterval(checkSchedule, 60000);
+    checkSchedule();
+}
+
+/**
+ * Creates a timelapse video from captured images
+ * @param {Object} options - Timelapse creation options
+ */
 async function createTimelapseInternal(options) {
     return queueFFmpegTask(async () => {
         if (!ffmpegAvailable) {
@@ -603,6 +800,10 @@ async function createTimelapseInternal(options) {
     });
 }
 
+/**
+ * Internal implementation for timelapse creation
+ * @param {Object} options - Timelapse creation options
+ */
 async function createTimelapseInternalImpl(options) {
 
     if (!fsSync.existsSync(path.dirname(options.outputPath))) {
@@ -740,6 +941,10 @@ async function getCameraImage(settings) {
     }
 }
 
+/**
+ * Retrieves storage information including used and available space
+ * @returns {Object} Storage information object
+ */
 async function getStorageInfo() {
     try {
         const storageLocation = store.get('storageSettings.location');
@@ -783,6 +988,10 @@ async function getStorageInfo() {
     }
 }
 
+/**
+ * Captures a single image with specified settings
+ * @param {Object} settings - Capture settings including camera and format
+ */
 async function captureImage(settings) {
     try {
         const storageInfo = await getStorageInfo();
@@ -849,7 +1058,7 @@ async function captureImage(settings) {
                 throw new Error('File was written but is empty');
             }
         } catch (writeError) {
-throw new Error(`Failed to save image: ${writeError.message}`);
+            throw new Error(`Failed to save image: ${writeError.message}`);
         }
         
         imageCount++;
@@ -886,6 +1095,13 @@ throw new Error(`Failed to save image: ${writeError.message}`);
     }
 }
 
+/**
+ * Adds text watermark to an image
+ * @param {Buffer} imageBuffer - Image buffer
+ * @param {string} text - Watermark text
+ * @param {string} position - Watermark position
+ * @returns {Buffer} Processed image buffer
+ */
 async function addTextWatermark(imageBuffer, text, position) {
     try {
         const escapedText = text.replace(/[<>&'"]/g, function(char) {
@@ -939,6 +1155,12 @@ async function addTextWatermark(imageBuffer, text, position) {
     }
 }
 
+/**
+ * Adds image watermark to an image
+ * @param {Buffer} imageBuffer - Image buffer
+ * @param {Object} watermarkSettings - Watermark configuration
+ * @returns {Buffer} Processed image buffer
+ */
 async function addImageWatermark(imageBuffer, watermarkSettings) {
     try {
         const watermarkPath = watermarkSettings.imagePath;
@@ -1014,9 +1236,109 @@ ipcMain.handle('get-capture-status', async function() {
                 isPaused: isPaused,
                 imageCount: imageCount,
                 elapsedTime: elapsedTime,
-                startTime: captureStartTime
+                startTime: captureStartTime,
+                motionDetectionEnabled: motionDetectionEnabled,
+                lastMotionTime: lastMotionTime
             }
         };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('detect-motion', async function(event, imageData) {
+    try {
+        const motionSettings = store.get('motionDetection');
+        if (!motionSettings.enabled) {
+            return { success: false, motion: false };
+        }
+
+        const now = Date.now();
+        if (lastMotionTime && (now - lastMotionTime) < motionSettings.cooldown) {
+            return { success: true, motion: false, reason: 'cooldown' };
+        }
+
+        let currentImageBuffer;
+        if (typeof imageData === 'string') {
+            currentImageBuffer = Buffer.from(imageData.replace(/^data:image\/[a-z]+;base64,/, ''), 'base64');
+        } else {
+            currentImageBuffer = Buffer.from(imageData);
+        }
+
+        if (!previousImageBuffer) {
+            previousImageBuffer = currentImageBuffer;
+            return { success: true, motion: false, reason: 'first_frame' };
+        }
+
+        try {
+            const currentImage = sharp(currentImageBuffer);
+            const previousImage = sharp(previousImageBuffer);
+
+            const { width, height } = await currentImage.metadata();
+            
+            const processWidth = Math.min(160, width);
+            const processHeight = Math.min(120, height);
+            const currentGray = await currentImage
+                .resize(processWidth, processHeight)
+                .grayscale()
+                .raw()
+                .toBuffer();
+                
+            const previousGray = await previousImage
+                .resize(processWidth, processHeight)
+                .grayscale()
+                .raw()
+                .toBuffer();
+
+            let totalDiff = 0;
+            let validPixels = 0;
+            const totalPixels = processWidth * processHeight;
+            const noiseThreshold = motionSettings.noiseFilter || 15;
+            const motionZones = motionSettings.zones || [];
+            
+            for (let i = 0; i < totalPixels; i++) {
+                const x = i % processWidth;
+                const y = Math.floor(i / processWidth);
+                
+                if (motionZones.length > 0) {
+                    const inZone = motionZones.some(zone => 
+                        x >= zone.x && x < (zone.x + zone.width) &&
+                        y >= zone.y && y < (zone.y + zone.height)
+                    );
+                    if (!inZone) continue;
+                }
+                
+                const diff = Math.abs(currentGray[i] - previousGray[i]);
+                
+                if (diff >= noiseThreshold) {
+                    totalDiff += diff;
+                    validPixels++;
+                }
+            }
+
+            const effectivePixels = motionZones.length > 0 ? validPixels : totalPixels;
+            const motionPercentage = effectivePixels > 0 ? (totalDiff / (effectivePixels * 255)) * 100 : 0;
+            const threshold = (100 - motionSettings.sensitivity) / 2;
+            const hasMotion = motionPercentage > threshold;
+
+            previousImageBuffer = currentImageBuffer;
+            
+            if (hasMotion) {
+                lastMotionTime = now;
+            }
+
+            return {
+                success: true,
+                motion: hasMotion,
+                timestamp: now,
+                sensitivity: motionSettings.sensitivity,
+                motionPercentage: Math.round(motionPercentage * 100) / 100,
+                threshold: Math.round(threshold * 100) / 100
+            };
+        } catch (imageError) {
+            previousImageBuffer = currentImageBuffer;
+            return { success: false, error: 'Image processing failed: ' + imageError.message };
+        }
     } catch (error) {
         return { success: false, error: error.message };
     }
@@ -1038,7 +1360,9 @@ ipcMain.handle('select-folder', async function(event, title) {
         }
 
         const selectedPath = path.resolve(result.filePaths[0]);
-        if (!selectedPath.startsWith(path.resolve(os.homedir()))) {
+        const homeDir = path.resolve(os.homedir());
+        
+        if (!selectedPath.startsWith(homeDir) || selectedPath.includes('..')) {
             return { success: false, error: 'Path outside user directory not allowed' };
         }
 
@@ -1107,24 +1431,7 @@ ipcMain.handle('select-watermark-image', async function(event, dialogTitle) {
     }
 });
 
-ipcMain.handle('get-settings', async function() {
-    try {
-        return { success: true, settings: store.store };
-    } catch (error) {
-        return { success: false, error: error.message };
-    }
-});
 
-ipcMain.handle('save-settings', async function(event, settings) {
-    try {
-        Object.keys(settings).forEach(function(key) {
-            store.set(key, settings[key]);
-        });
-        return { success: true };
-    } catch (error) {
-        return { success: false, error: error.message };
-    }
-});
 
 ipcMain.handle('test-ftp-connection', async function() {
     try {
@@ -1141,6 +1448,11 @@ ipcMain.handle('test-ftp-connection', async function() {
     }
 });
 
+/**
+ * Tests FTP connection with provided settings
+ * @param {Object} ftpSettings - FTP configuration
+ * @returns {Object} Connection test result
+ */
 async function testFtpConnection(ftpSettings) {
     const client = new ftp.Client();
     
@@ -1165,6 +1477,11 @@ async function testFtpConnection(ftpSettings) {
     return { success: true };
 }
 
+/**
+ * Tests SFTP connection with provided settings
+ * @param {Object} ftpSettings - SFTP configuration
+ * @returns {Object} Connection test result
+ */
 async function testSftpConnection(ftpSettings) {
     const client = new sftp();
     
@@ -1315,7 +1632,12 @@ ipcMain.handle('create-timelapse', async function(event, options) {
         const outputDir = path.join(store.get('storageSettings.location'), 'videos');
         await ensureDirectoryExists(outputDir);
 
-        const outputPath = path.join(outputDir, `${options.name}.mp4`);
+        let outputExtension = '.mp4';
+        if (options.format === 'webm') {
+            outputExtension = '.webm';
+        }
+        
+        const outputPath = path.join(outputDir, `${options.name}${outputExtension}`);
         
         if (!options.inputPath) {
             throw new Error('Input directory path is required');
@@ -1364,11 +1686,20 @@ ipcMain.handle('create-timelapse', async function(event, options) {
         let videoEncoder = 'mpeg4';
         let usesBitrate = true;
         
-        try {
-            execSync('ffmpeg -f lavfi -i testsrc=duration=0.1:size=320x240:rate=1 -c:v libx264 -f null - 2>/dev/null', { timeout: 5000 });
-            videoEncoder = 'libx264';
+        if (options.format === 'webm') {
+            videoEncoder = 'libvpx-vp9';
+            usesBitrate = true;
+        } else if (options.format === 'mp4_h265') {
+            videoEncoder = 'libx265';
             usesBitrate = false;
-        } catch (e) {
+        } else {
+            try {
+                const nullDevice = process.platform === 'win32' ? 'NUL' : '/dev/null';
+                execSync(`ffmpeg -f lavfi -i testsrc=duration=0.1:size=320x240:rate=1 -c:v libx264 -f null - 2>${nullDevice}`, { timeout: 5000 });
+                videoEncoder = 'libx264';
+                usesBitrate = false;
+            } catch (e) {
+            }
         }
         
         if (store.get('videoSettings.hardwareAcceleration')) {
@@ -1385,7 +1716,9 @@ ipcMain.handle('create-timelapse', async function(event, options) {
 
         ffmpegArgs.push('-c:v', videoEncoder);
         
-        if (usesBitrate) {
+        if (options.preset && options.preset.bitrate) {
+            ffmpegArgs.push('-b:v', `${options.preset.bitrate}k`);
+        } else if (usesBitrate) {
             let bitrate = '5M';
             switch (options.quality) {
                 case 'low':
@@ -1436,9 +1769,15 @@ ipcMain.handle('create-timelapse', async function(event, options) {
             videoFilters.push('zoompan=z=1:x=\'if(lte(on,1),(iw-ow)/2,x-1)\':y=\'ih/2-(ih/zoom/2)\':d=' + (options.fps * 10));
         }
         
+        const targetResolution = options.resolution || '1920x1080';
+        const [width, height] = targetResolution.split('x').map(Number);
+        
         if (store.get('videoSettings.preserveAspectRatio') !== false) {
-            videoFilters.push('scale=\'if(gt(a,16/9),1920,-1)\':\'if(gt(a,16/9),-1,1080)\'');
-            videoFilters.push('pad=1920:1080:(ow-iw)/2:(oh-ih)/2');
+            const targetAspect = width / height;
+            videoFilters.push(`scale='if(gt(a,${targetAspect}),${width},-1)':'if(gt(a,${targetAspect}),-1,${height})'`);
+            videoFilters.push(`pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2`);
+        } else {
+            videoFilters.push(`scale=${width}:${height}`);
         }
         
         if (videoFilters.length > 0) {
@@ -1710,6 +2049,160 @@ ipcMain.handle('cleanup-old-files', async function() {
     }
 });
 
+ipcMain.handle('save-project', async function(event, projectData) {
+    try {
+        const { dialog } = require('electron');
+        const result = await dialog.showSaveDialog(mainWindow, {
+            title: 'Save Project',
+            defaultPath: `${projectData.name || 'timelapse-project'}.tlp`,
+            filters: [
+                { name: 'Timelapse Project', extensions: ['tlp'] },
+                { name: 'All Files', extensions: ['*'] }
+            ]
+        });
+
+        if (result.canceled) {
+            return { success: false, canceled: true };
+        }
+
+        const projectInfo = {
+            name: projectData.name,
+            created: new Date().toISOString(),
+            version: '1.1.0',
+            settings: {
+                camera: projectData.camera,
+                resolution: projectData.resolution,
+                interval: projectData.interval,
+                watermark: projectData.watermark,
+                motionDetection: projectData.motionDetection,
+                scheduling: projectData.scheduling
+            },
+            metadata: {
+                totalImages: projectData.totalImages || 0,
+                estimatedDuration: projectData.estimatedDuration || 0,
+                lastModified: new Date().toISOString()
+            }
+        };
+
+        await fs.writeFile(result.filePath, JSON.stringify(projectInfo, null, 2));
+        return { success: true, path: result.filePath };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('load-project', async function() {
+    try {
+        const { dialog } = require('electron');
+        const result = await dialog.showOpenDialog(mainWindow, {
+            title: 'Load Project',
+            filters: [
+                { name: 'Timelapse Project', extensions: ['tlp'] },
+                { name: 'All Files', extensions: ['*'] }
+            ]
+        });
+
+        if (result.canceled) {
+            return { success: false, canceled: true };
+        }
+
+        const projectData = await fs.readFile(result.filePaths[0], 'utf8');
+        const project = JSON.parse(projectData);
+        
+        return { success: true, project: project, path: result.filePaths[0] };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('get-export-presets', async function() {
+    try {
+        const presets = {
+            youtube: {
+                name: 'YouTube',
+                description: '1080p HD optimized for YouTube',
+                fps: 30,
+                quality: 'high',
+                resolution: '1920x1080',
+                format: 'mp4',
+                codec: 'h264',
+                bitrate: 8000,
+                aspectRatio: '16:9'
+            },
+            youtube_4k: {
+                name: 'YouTube 4K',
+                description: '4K Ultra HD for premium YouTube content',
+                fps: 30,
+                quality: 'ultra',
+                resolution: '3840x2160',
+                format: 'mp4',
+                codec: 'h264',
+                bitrate: 40000,
+                aspectRatio: '16:9'
+            },
+            instagram_reels: {
+                name: 'Instagram Reels',
+                description: 'Vertical format for Instagram Reels and Stories',
+                fps: 30,
+                quality: 'high',
+                resolution: '1080x1920',
+                format: 'mp4',
+                codec: 'h264',
+                bitrate: 5000,
+                aspectRatio: '9:16'
+            },
+            instagram_feed: {
+                name: 'Instagram Feed',
+                description: 'Square format for Instagram feed posts',
+                fps: 30,
+                quality: 'high',
+                resolution: '1080x1080',
+                format: 'mp4',
+                codec: 'h264',
+                bitrate: 5000,
+                aspectRatio: '1:1'
+            },
+            tiktok: {
+                name: 'TikTok',
+                description: 'Vertical format optimized for TikTok',
+                fps: 30,
+                quality: 'high',
+                resolution: '1080x1920',
+                format: 'mp4',
+                codec: 'h264',
+                bitrate: 5000,
+                aspectRatio: '9:16'
+            },
+            web_optimized: {
+                name: 'Web Optimized',
+                description: 'Lightweight 720p for web streaming',
+                fps: 24,
+                quality: 'medium',
+                resolution: '1280x720',
+                format: 'mp4',
+                codec: 'h264',
+                bitrate: 3500,
+                aspectRatio: '16:9'
+            },
+            archive_quality: {
+                name: 'Archive Quality',
+                description: '4K 60fps maximum quality preservation',
+                fps: 60,
+                quality: 'ultra',
+                resolution: '3840x2160',
+                format: 'mp4',
+                codec: 'h265',
+                bitrate: 60000,
+                aspectRatio: '16:9'
+            }
+        };
+        
+        return { success: true, presets: presets };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
 process.on('uncaughtException', function(error) {
     if (mainWindow && !mainWindow.isDestroyed()) {
         dialog.showErrorBox('Unexpected Error',
@@ -1724,7 +2217,6 @@ process.on('unhandledRejection', function(reason, promise) {
     }
 });
 
-app.enableSandbox = false;
 
 app.whenReady().then(async function() {
     Menu.setApplicationMenu(null);
@@ -1791,6 +2283,107 @@ app.on('web-contents-created', function(event, contents) {
         shell.openExternal(details.url);
         return { action: 'deny' };
     });
+});
+
+ipcMain.handle('add-motion-zone', async (event, zone) => {
+    try {
+        if (!zone || typeof zone.x !== 'number' || typeof zone.y !== 'number' || 
+            typeof zone.width !== 'number' || typeof zone.height !== 'number' ||
+            zone.x < 0 || zone.y < 0 || zone.width <= 0 || zone.height <= 0) {
+            return { success: false, error: 'Invalid zone coordinates' };
+        }
+
+        const motionSettings = store.get('motionDetection') || {};
+        motionSettings.zones = motionSettings.zones || [];
+        motionSettings.zones.push({
+            x: Math.round(zone.x),
+            y: Math.round(zone.y),
+            width: Math.round(zone.width),
+            height: Math.round(zone.height),
+            id: Date.now(),
+            name: zone.name || `Zone ${motionSettings.zones.length + 1}`
+        });
+        store.set('motionDetection', motionSettings);
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('remove-motion-zone', async (event, zoneId) => {
+    try {
+        const motionSettings = store.get('motionDetection') || {};
+        motionSettings.zones = (motionSettings.zones || []).filter(zone => zone.id !== zoneId);
+        store.set('motionDetection', motionSettings);
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('get-motion-zones', async () => {
+    const motionSettings = store.get('motionDetection') || {};
+    return motionSettings.zones || [];
+});
+
+ipcMain.handle('add-cron-pattern', async (event, pattern) => {
+    try {
+        const cron = require('node-cron');
+        if (!cron.validate(pattern)) {
+            return { success: false, error: 'Invalid cron pattern' };
+        }
+        
+        const schedulingSettings = store.get('scheduling') || {};
+        schedulingSettings.cronPatterns = schedulingSettings.cronPatterns || [];
+        schedulingSettings.cronPatterns.push(pattern);
+        store.set('scheduling', schedulingSettings);
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('add-seasonal-rule', async (event, rule) => {
+    try {
+        const schedulingSettings = store.get('scheduling') || {};
+        schedulingSettings.seasonalRules = schedulingSettings.seasonalRules || [];
+        schedulingSettings.seasonalRules.push(rule);
+        store.set('scheduling', schedulingSettings);
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('add-schedule-exception', async (event, exception) => {
+    try {
+        const schedulingSettings = store.get('scheduling') || {};
+        schedulingSettings.exceptions = schedulingSettings.exceptions || [];
+        schedulingSettings.exceptions.push(exception);
+        store.set('scheduling', schedulingSettings);
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('get-settings', async () => {
+    try {
+        return store.store;
+    } catch (error) {
+        return {};
+    }
+});
+
+ipcMain.handle('save-settings', async (event, settings) => {
+    try {
+        for (const [key, value] of Object.entries(settings)) {
+            store.set(key, value);
+        }
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
 });
 
 app.setAboutPanelOptions({

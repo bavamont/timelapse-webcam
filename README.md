@@ -1,249 +1,222 @@
 # Timelapse Webcam
 
-A desktop application for creating stunning timelapse videos from your webcam. Built with Electron and powered by FFmpeg for high-quality video processing with automatic capture, FTP/SFTP upload, and advanced video creation features.
+A desktop application for automated timelapse creation from webcam and screen capture sources. Built with Electron and powered by modern video processing technologies for high-quality time-lapse photography and videography.
 
 ## Features
 
-### Webcam Capture
-- **Automated Capture** - Take photos at custom intervals (seconds, minutes, or hours)
-- **Multi-Camera Support** - Detect and select from available webcams
-- **High Resolution** - Support for resolutions up to 4K (3840×2160)
-- **Real-Time Preview** - Live camera preview with watermark overlay
-- **Smart Status Tracking** - Monitor capture progress with detailed statistics
+### Timelapse Creation
+- **Webcam Capture** - Record from any connected USB or built-in camera with live preview
+- **Screen Recording** - Capture full desktop screen for screen-based timelapses
+- **Interval Control** - Set capture intervals from seconds to hours for custom timelapse speed
+- **Motion Detection** - Basic motion-triggered capture with adjustable sensitivity settings
+- **Scheduled Capture** - Time-based capture with day-of-week selection and start/stop times
+- **Automatic Timelapse Creation** - Periodic automatic video generation from recent captures (24-72 hour intervals)
+- **Capture Pause/Resume** - Temporarily pause capture sessions without stopping completely
 
-### Advanced Watermarking
-- **Text Watermarks** - Add custom text overlays with position control
-- **Image Watermarks** - Use PNG, JPG, or other image formats as watermarks
-- **Size Control** - Small, medium, or large watermark sizing options
-- **Opacity Settings** - Adjustable transparency from 10% to 100%
-- **Position Control** - Place watermarks in any corner or center
-- **Real-Time Preview** - See watermark placement before capturing
+### Video Processing
+- **FFmpeg Integration** - Video encoding with H.264 codec and basic format support
+- **Multiple Formats** - Export to MP4, AVI, and MOV formats
+- **Quality Control** - Four quality presets (Low, Medium, High, Ultra) with adjustable settings
+- **Frame Rate Options** - Adjustable output frame rates from 1 to 120 FPS
+- **Resolution Support** - Process videos from 720p to 4K (depending on source capabilities) with aspect ratio preservation
+- **Video Effects** - Fade in/out, zoom, and pan effects for enhanced visual appeal
 
-### Image Processing
-- **Multiple Formats** - Save as JPEG, PNG, or WebP with quality control
-- **Professional Watermarking** - Text and image overlays with transparency support
-- **Automatic Upload** - Real-time FTP upload of captured images
-- **Smart Storage** - Organized file structure with automatic cleanup options
+### Export and Sharing
+- **Platform Presets** - Pre-configured export settings for YouTube, Instagram, TikTok, and web
+- **Watermarking** - Add text or image watermarks with position and opacity control
+- **Background Music** - Integrate audio tracks with volume control
+- **FTP/SFTP Upload** - Automatic upload to remote servers with connection testing
+- **Local Export** - Save videos locally with custom naming and organization
 
-### Professional Video Creation
-- **High-Quality Output** - Create MP4 videos with customizable FPS (12-60)
-- **Quality Presets** - Low, Medium, High, and Ultra quality settings
-- **Hardware Acceleration** - GPU-accelerated encoding for faster processing
-- **Background Music** - Add audio tracks with volume control
-- **Video Effects** - Fade in/out, zoom, and pan effects
-- **Batch Processing** - Create videos from any image sequence
+### Project Management
+- **Settings Persistence** - Save and restore application settings automatically  
+- **Project Files** - Save capture configurations in .tlp project format
+- **Storage Management** - Automatic file cleanup with configurable retention periods
+- **Quota Control** - Set storage limits with automatic cleanup when exceeded
 
-### Advanced Features
-- **FTP/SFTP Integration** - Automatic upload of both images and videos to remote servers
-- **Auto-Timelapse Creation** - Scheduled automatic timelapse creation every 24/48/72 hours
-- **Storage Management** - Auto-cleanup with configurable retention periods
-- **Multi-Language** - Full support for English and German interfaces
-- **Real-Time Progress** - Live progress tracking with frame counting
-- **Custom Output** - Flexible naming and export options
-- **Single Instance Lock** - Prevents multiple application instances
-- **Custom Title Bar** - Modern frameless window with custom controls
+### User Interface
+- **Live Preview** - Real-time camera preview with capture status monitoring
+- **Progress Tracking** - Visual progress indicators for video creation and upload
+- **Multi-Language** - English and German interface support
+- **Cross-Platform** - Consistent experience across Windows, macOS, and Linux
 
 ## Supported Formats
 
-### Image Input/Output
-- **JPEG** (.jpg, .jpeg) - Optimized for photos with adjustable quality
-- **PNG** (.png) - Perfect for images with transparency
-- **WebP** (.webp) - Modern format with superior compression
+### Input Sources
+- **Webcam Devices** - USB and built-in cameras with automatic device detection
+- **Screen Capture** - Full desktop screen recording
+- **Audio Files** (.mp3, .wav, .aac, .ogg) - Background music for video creation
+- **Captured Images** (.jpg, .jpeg) - Process captured images for timelapse creation
 
-### Watermark Images
-- **PNG** (.png) - Recommended for transparency support
-- **JPEG** (.jpg, .jpeg) - Standard photo format
-- **GIF** (.gif) - Animated graphics support
-- **BMP** (.bmp) - Bitmap image format
-- **WebP** (.webp) - Modern web format
-- **SVG** (.svg) - Scalable vector graphics
-
-### Audio Input
-- **MP3** (.mp3) - Most common audio format
-- **WAV** (.wav) - Uncompressed high-quality audio
-- **AAC** (.aac, .m4a) - Advanced audio coding
-
-### Video Output
-- **MP4** (.mp4) - Universal compatibility with H.264 encoding
+### Output Formats
+- **MP4** (.mp4) - H.264 encoding with adjustable quality settings
+- **AVI** (.avi) - Standard video format for broad compatibility  
+- **MOV** (.mov) - QuickTime format for video editing workflows
+- **Project Files** (.tlp) - Save capture settings and configurations
 
 ## Quick Start
 
-1. **Setup Camera** - Connect your webcam and select it from the dropdown
-2. **Configure Capture** - Choose resolution and set your desired interval
-3. **Add Watermark** (Optional) - Select text or image watermark with custom positioning
-4. **Set Storage** - Select save location and optionally configure FTP upload
-5. **Start Capturing** - Click "Start Capture" to begin taking photos
-6. **Create Video** - Use the Timelapse tab to turn your images into stunning videos
+### Creating Your First Timelapse
+1. **Select Camera** - Choose from available webcam devices or screen capture
+2. **Set Interval** - Configure capture frequency (seconds, minutes, or hours)
+3. **Start Capture** - Begin recording with live preview monitoring
+4. **Create Video** - Use captured images to generate timelapse video
+5. **Export or Upload** - Save locally or upload via FTP/SFTP
+
+### Setting Up Automation
+1. **Motion Detection** - Enable motion-triggered capture with sensitivity adjustment
+2. **Schedule Capture** - Set specific times and days for automatic recording
+3. **Storage Management** - Configure automatic cleanup and storage limits
+4. **Upload Configuration** - Set up FTP/SFTP for automatic video upload
 
 ## Interface Overview
 
-### Main Tabs
-- **Capture** - Camera preview, capture controls, and real-time statistics
-- **Timelapse** - Video creation interface with advanced options
-- **Settings** - Comprehensive configuration for all app features
-- **Help** - Built-in documentation and tips for best results
+### Navigation Tabs
+- **Capture** - Camera selection, capture settings, and live preview
+- **Timelapse** - Video creation, export options, and video management
+- **Settings** - Application preferences, storage, and upload configuration
+- **Help** - Documentation and application information
 
-### Capture Interface
-- **Live Preview** - Real-time camera feed with watermark preview
-- **Watermark Controls** - Switch between text and image watermarks
-- **Capture Stats** - Images captured, elapsed time, next capture time
-- **Status Indicator** - Visual status showing stopped, capturing, or paused state
-- **Quick Controls** - Start, pause, resume, and stop capture functions
-
-### Watermark Settings
-- **Type Selection** - Choose between text or image watermarks
-- **Text Settings** - Custom text input with font styling
-- **Image Settings** - Browse and select watermark images
-- **Size Control** - Small (150px), Medium (200px), Large (300px)
-- **Opacity Control** - Adjustable transparency from 10% to 100%
-- **Position Options** - Top-left, top-right, bottom-left, bottom-right, center
-- **Live Preview** - Real-time preview in camera feed
-
-### Video Creation
-- **Image Selection** - Choose from captured images or import custom sequences
-- **Output Settings** - Configure name, FPS, quality, and effects
-- **Audio Integration** - Add background music with volume control
-- **Progress Tracking** - Real-time creation progress with frame counting
+### Main Workflow
+1. **Setup** - Configure camera source and capture parameters
+2. **Capture** - Record images at specified intervals with optional motion detection
+3. **Create** - Generate timelapse videos from captured image sequences
+4. **Export** - Save videos locally or upload to remote servers automatically
 
 ## Configuration Options
 
-### Auto-Timelapse Settings
-- **Schedule Options** - Create timelapses automatically every 24, 48, 72 hours or weekly
-- **File Management** - Choose to replace previous files or create new timestamped versions
-- **Auto-Upload** - Automatically upload created timelapses to FTP/SFTP servers
-- **Notification** - Get notified when auto-timelapses are created
+### Capture Settings
+- **Image Quality** - JPEG quality from 1-100% with format selection (JPEG, PNG, WebP)
+- **Resolution Control** - Camera resolution from 720p to 4K based on device capabilities
+- **Interval Timing** - Capture frequency from 1 second to several hours
+- **Auto-start** - Automatically begin capture when application launches
 
-### Camera Settings
-- **Resolution Options** - 640×480 to 4K (3840×2160)
-- **Capture Intervals** - 1 second to multiple hours
-- **Image Quality** - JPEG quality from 50-100%
-- **Auto-Start** - Automatic capture on application launch
+### Motion Detection
+- **Advanced Sensitivity** - Threshold settings from 10-100% for motion triggering
+- **Noise Filtering** - Intelligent noise reduction to prevent false triggers
+- **Motion Zones** - Define specific areas for motion detection with custom sensitivity
+- **Cooldown Timer** - Prevent excessive captures with 1-60 second delays
+- **Enhanced Algorithm** - Improved pixel difference analysis with zone-based detection
 
-### Watermark Configuration
-- **Text Watermarks** - Custom text with position control
-- **Image Watermarks** - Support for PNG, JPEG, GIF, BMP, WebP, SVG
-- **Size Options** - Small, medium, and large preset sizes
-- **Transparency** - Opacity control from 10% to 100%
-- **Positioning** - Five position presets plus custom placement
-- **Preview Mode** - Real-time watermark preview overlay
-
-### FTP/SFTP Settings
-- **Protocol Selection** - Choose between FTP or SFTP protocols
-- **Server Configuration** - Host, port (auto-detected: 21 for FTP, 22 for SFTP), username, and password
-- **Auto-Upload** - Separate settings for images and videos
-- **Directory Structure** - Custom remote folder organization
-- **Connection Testing** - Built-in FTP/SFTP connection verification
+### Scheduling
+- **Advanced Time Windows** - Set start and stop times for automated capture
+- **Day Selection** - Choose specific days of the week for scheduled recording
+- **Cron Pattern Support** - Use advanced cron expressions for complex scheduling
+- **Seasonal Rules** - Different schedules for different months/seasons
+- **Holiday Exceptions** - Skip capture on specific dates or date ranges
+- **Timezone Support** - Local time zone handling for scheduling accuracy
 
 ### Storage Management
-- **Local Storage** - Configurable storage location
-- **Auto-Cleanup** - Automatic deletion of old files (7-90 days)
-- **Storage Limits** - Maximum storage quotas (5GB-100GB or unlimited)
-- **Folder Structure** - Organized by date and type
+- **Default Paths** - Images saved to `~/TimelapseWebcam/images/`, Videos to `~/TimelapseWebcam/videos/`
+- **Auto Cleanup** - Delete old files after specified number of days (1-365)
+- **Storage Limits** - Set maximum storage usage (1-1000 GB) with automatic cleanup
+- **File Organization** - Automatic timestamp-based file naming and organization
 
-### Video Processing
-- **Quality Presets** - Low, Medium, High, and Ultra settings optimized for different use cases
-- **Hardware Acceleration** - GPU encoding when available for faster processing
-- **Aspect Ratio** - Maintain or modify video proportions
-- **Custom Effects** - Professional transitions and movements (fade, zoom, pan)
-- **Frame Rate Control** - Adjustable FPS from 12 to 60
+### Network Upload
+- **Protocol Support** - FTP and SFTP with standard authentication
+- **Auto Upload** - Automatically upload captured images and created videos
+- **Connection Testing** - Verify server connectivity before starting uploads
+- **Custom Directories** - Configure remote folder paths for file organization
 
-## Keyboard Shortcuts
+### Video Export
+- **Quality Presets** - Four preset levels (Low, Medium, High, Ultra) with custom bitrate
+- **Platform Formats** - Export presets optimized for YouTube, Instagram, TikTok  
+- **Audio Integration** - Add background music with volume control (0-100%)
+- **Format Selection** - Choose output format and codec for different use cases
 
-- **Space** - Start/Stop capture
-- **P** - Pause/Resume capture
-- **Ctrl+T** - Create timelapse from current images
-- **Ctrl+S** - Open settings
-- **F11** - Toggle fullscreen
-- **Ctrl+Q** - Quit application
-- **Ctrl+Shift+I** - Open developer tools (debug mode)
+## Performance & Optimization
 
-## Use Cases & Tips
+- **FFmpeg Processing** - Leverages FFmpeg for efficient video encoding and processing
+- **Hardware Acceleration** - Optional GPU acceleration when supported by system
+- **Background Operation** - Capture continues while application runs in background
+- **Resource Management** - Efficient memory usage during long capture sessions
+- **Queue Processing** - Serialized video creation to prevent system overload
 
-### Time-lapse Subjects
-- **Cloud Movement** - 10-30 second intervals for dynamic sky scenes
-- **Plant Growth** - 15-60 minute intervals for long-term growth documentation
-- **Construction** - 5-15 minute intervals for building progress
-- **Traffic Flow** - 1-5 second intervals for busy intersections
-- **Sunrise/Sunset** - 30 second intervals for golden hour scenes
+## Technical Details
 
-### Watermark Best Practices
-- **Logo Placement** - Use PNG images with transparency for professional logos
-- **Brand Consistency** - Maintain consistent watermark placement across all captures
-- **Size Considerations** - Choose watermark size appropriate to image resolution
-- **Opacity Balance** - Use 60-80% opacity for subtle but visible watermarks
-- **High Contrast** - Ensure watermarks are visible against various backgrounds
-- **Format Selection** - PNG recommended for logos, JPEG for photographic watermarks
+- **Framework** - Electron (v37+) for cross-platform desktop application
+- **Video Processing** - FFmpeg for video encoding and format conversion
+- **Image Processing** - Canvas-based capture with Sharp.js for watermarking and processing
+- **Languages** - JavaScript (ES6+), HTML5, CSS3
+- **Supported OS** - Windows 10/11, macOS 10.15+, Linux (Ubuntu 18.04+)
+- **Architecture** - Chromium-based with Node.js backend integration
+- **Security** - Context isolation and secure inter-process communication
 
-### Best Practices
-- **Stable Setup** - Use a tripod or secure mounting for consistent framing
-- **Lighting** - Ensure adequate and consistent lighting throughout capture
-- **Storage Planning** - A 24-hour capture at 30-second intervals creates ~2,880 images
-- **Power Management** - Use AC power for extended capture sessions
-- **Test Runs** - Start with short captures to verify settings and framing
-- **Watermark Testing** - Preview watermark placement and opacity before long captures
+## System Requirements
 
-### Technical Recommendations
-- **Internet Connection** - Stable connection required for FTP/SFTP uploads
-- **Disk Space** - Plan for 2-5MB per image depending on resolution and quality
-- **Processing Power** - Higher-end CPU/GPU for faster video creation
-- **Camera Quality** - USB 3.0 cameras recommended for high-resolution capture
-- **Watermark Images** - Use high-resolution source images for best quality
+### Minimum Requirements
+- **OS**: Windows 10, macOS 10.15, or Linux (Ubuntu 18.04+)
+- **RAM**: 4GB RAM for basic operation
+- **Storage**: 1GB available space for application and temporary files
+- **Camera**: USB webcam or built-in camera for video capture
+- **FFmpeg**: Required for video processing (automatic detection or manual install)
 
-## Installation & Updates
+### Recommended Requirements
+- **OS**: Windows 11, macOS 12+, or recent Linux distribution  
+- **RAM**: 8GB RAM for smooth 4K processing and large timelapse projects
+- **Storage**: 5GB+ available space for image sequences and video output
+- **Network**: Broadband connection for FTP/SFTP upload functionality
+- **Graphics**: Dedicated GPU recommended for faster video encoding
 
-### System Requirements
-- **Memory** - 4GB RAM minimum, 8GB recommended
-- **Storage** - 1GB for application, additional space for captures
-- **Camera** - USB webcam with DirectShow (Windows) or V4L2 (Linux) support
-- **Network** - Internet connection for FTP/SFTP uploads and updates
-- **Graphics** - DirectX 11 compatible for hardware acceleration
-- **Node.js** - Version 22.0.0 or higher
-- **NPM** - Version 10.0.0 or higher
+## Installation
 
-### Auto-Updates
-The application includes automatic update checking and installation. Updates are delivered through GitHub releases with incremental patches and feature additions.
+### From Release
+1. **Download** - Get the latest release package for your platform
+2. **Install** - Run the platform-specific installer
+3. **Launch** - Start the application and begin creating timelapses
+
+### From Source
+```bash
+git clone https://github.com/bavamont/timelapse-webcam.git
+cd timelapse-webcam
+npm install
+npm start
+```
+
+### Build Commands
+```bash
+npm run build          # Build for current platform
+npm run build:win      # Build for Windows
+npm run build:mac      # Build for macOS  
+npm run build:linux    # Build for Linux
+npm run dist           # Create distribution packages
+```
 
 ## Update History
 
-**02/08/2025** - 1.0.0 - Complete rewrite with modern UI
-- Multi-language support (English/German)
-- Video creation with FFmpeg and hardware acceleration
-- Text and image watermarking system with live preview
-- FTP/SFTP upload
-- Automatic scheduled timelapse creation (24/48/72 hours)
-- Auto-updater functionality
-- Video effects (fade, zoom, pan)
+**27/08/2025** - 1.1.0 - Enhanced timelapse functionality and automation
+- Motion detection with adjustable sensitivity for triggered capture
+- Screen capture support for desktop and application window recording
+- Scheduling system with time windows and day-of-week selection
+- Export presets for popular video platforms (YouTube, Instagram, TikTok)
+- Project save/load system for capture configuration management
+- Automatic timelapse creation with configurable intervals (24-72 hours)
+- Capture pause/resume functionality for better session control
+- Video effects including fade, zoom, and pan transitions
+- Enhanced security with context isolation and improved file handling
+- Updated to Electron 37.2.4 with performance improvements
 
-**26/04/2019** - 0.0.1, Initial release
-
-
-## Troubleshooting
-
-### Common Issues
-- **Camera Not Detected** - Check USB connection and camera permissions
-- **FTP/SFTP Upload Fails** - Verify server settings, protocol selection, and network connectivity
-- **Video Creation Slow** - Enable hardware acceleration in settings
-- **Storage Full** - Enable auto-cleanup or increase storage limits
-- **Watermark Not Showing** - Check image path and format compatibility
-- **Auto-Timelapse Not Working** - Verify schedule settings and ensure app remains running
-
-### Watermark Issues
-- **Image Not Loading** - Verify image format is supported (PNG, JPEG, GIF, BMP, WebP, SVG)
-- **Poor Quality** - Use high-resolution source images for watermarks
-- **Transparency Problems** - Use PNG format for transparent watermarks
-- **Size Issues** - Adjust watermark size setting or use different source image
-- **Position Problems** - Check camera preview for accurate positioning
-
-### FFmpeg Requirements
-This software uses FFmpeg for video processing. The FFmpeg binaries are included with the application for seamless operation across all supported platforms.
+**Initial Release** - 1.0.0 - Core timelapse application
+- Webcam capture with interval-based image recording
+- Basic video creation from image sequences using FFmpeg
+- FTP/SFTP upload support for remote storage
+- Text and image watermarking with position control
+- Automatic timelapse generation at specified intervals
+- Cross-platform support with modern Electron-based interface
 
 ## Credits
 
-**Developed by Bavamont** - [www.bavamont.com](https://www.bavamont.com)
+Developed by **www.bavamont.com**
 
-**Powered by:**
-- **FFmpeg** - Video and audio processing ([LGPLv2.1](http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html))
-- **Sharp.js** - High-performance image processing and watermarking
-- **Electron** - Cross-platform desktop framework
-- **basic-ftp** - FTP client implementation
-- **ssh2-sftp-client** - SFTP client implementation
+Built with:
+- **Electron** - Cross-platform desktop application framework
+- **FFmpeg** - Video processing and encoding engine
+- **Sharp** - Node.js image processing library
+- **basic-ftp** - FTP client for file uploads
+- **ssh2-sftp-client** - SFTP client for secure file transfers
+- **electron-store** - Application settings persistence
+- **node-cron** - Task scheduling for automated capture
+
+---
+
+*For support, feature requests, or bug reports, please check the project's issue tracker or visit the project website.*

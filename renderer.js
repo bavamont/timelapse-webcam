@@ -14,6 +14,12 @@ const ipcRenderer = (() => {
     }
 })();
 
+/**
+ * Safely invokes an IPC channel with error handling
+ * @param {string} channel - IPC channel name
+ * @param {...any} args - Arguments to pass to the channel
+ * @returns {Promise<any>} Channel response or error
+ */
 async function safeInvoke(channel, ...args) {
     if (!ipcRenderer) {
         throw new Error('IPC communication not available');
@@ -72,6 +78,9 @@ const elements = {
     maximizeBtn: document.getElementById('maximize-btn'),
     closeBtn: document.getElementById('close-btn'),
     
+    saveProjectBtn: document.getElementById('save-project-btn'),
+    loadProjectBtn: document.getElementById('load-project-btn'),
+    
     captureStatusText: document.getElementById('capture-status-text'),
     statusIndicator: document.getElementById('status-indicator'),
     languageSelector: document.getElementById('language-selector'),
@@ -82,7 +91,11 @@ const elements = {
     currentVersion: document.getElementById('current-version'),
     updateStatus: document.getElementById('update-status'),
     
+    sourceType: document.getElementById('source-type'),
+    cameraSelection: document.getElementById('camera-selection'),
+    screenSelection: document.getElementById('screen-selection'),
     cameraSelect: document.getElementById('camera-select'),
+    screenSelect: document.getElementById('screen-select'),
     resolutionSelect: document.getElementById('resolution-select'),
     intervalValue: document.getElementById('interval-value'),
     intervalUnit: document.getElementById('interval-unit'),
@@ -130,8 +143,12 @@ const elements = {
     timelapseImages: document.getElementById('timelapse-images'),
     browseImagesBtn: document.getElementById('browse-images-btn'),
     timelapseOutputName: document.getElementById('timelapse-output-name'),
+    timelapsePreset: document.getElementById('timelapse-preset'),
+    presetDescription: document.getElementById('preset-description'),
+    timelapseResolution: document.getElementById('timelapse-resolution'),
     timelapseFps: document.getElementById('timelapse-fps'),
     timelapseQuality: document.getElementById('timelapse-quality'),
+    timelapseFormat: document.getElementById('timelapse-format'),
     addMusic: document.getElementById('add-music'),
     musicSettings: document.getElementById('music-settings'),
     musicFile: document.getElementById('music-file'),
@@ -205,19 +222,34 @@ const elements = {
     autoTimelapseMode: document.getElementById('auto-timelapse-mode'),
     autoTimelapseUpload: document.getElementById('auto-timelapse-upload'),
     autoTimelapseFps: document.getElementById('auto-timelapse-fps'),
-    autoTimelapseQuality: document.getElementById('auto-timelapse-quality')
+    autoTimelapseQuality: document.getElementById('auto-timelapse-quality'),
+    
+    motionDetectionEnabled: document.getElementById('motion-detection-enabled'),
+    motionDetectionSettings: document.getElementById('motion-detection-settings'),
+    motionSensitivity: document.getElementById('motion-sensitivity'),
+    motionSensitivityValue: document.getElementById('motion-sensitivity-value'),
+    motionCooldown: document.getElementById('motion-cooldown'),
+    motionOnlyCapture: document.getElementById('motion-only-capture'),
+    
+    smartSchedulingEnabled: document.getElementById('smart-scheduling-enabled'),
+    smartSchedulingSettings: document.getElementById('smart-scheduling-settings'),
+    scheduleStartTime: document.getElementById('schedule-start-time'),
+    scheduleEndTime: document.getElementById('schedule-end-time'),
+    
+    exportPresets: document.getElementById('export-presets')
 };
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
 });
 
+/**
+ * Initializes the application by setting up UI and loading initial data
+ */
 async function initializeApp() {
     if (!ipcRenderer) {
         if (typeof showToast === 'function') {
-            showToast('Critical Error: Unable to communicate with the main process. Please restart the application.', 'error');
-        } else {
-            alert('Critical Error: Unable to communicate with the main process. Please restart the application.');
+            showToast(i18n.t('errors.critical_ipc_error'), 'error');
         }
         return;
     }
@@ -227,8 +259,10 @@ async function initializeApp() {
     setupUpdateEventListeners();
     await loadSettings();
     await loadCameras();
+    await loadScreenSources();
     await loadVideos();
     await loadAppVersion();
+    await loadExportPresets();
     setupLanguageHandling();
     startStatusUpdates();
     
@@ -241,6 +275,9 @@ async function initializeApp() {
     }
 }
 
+/**
+ * Sets up language handling and selector functionality
+ */
 function setupLanguageHandling() {
     if (typeof i18n !== 'undefined') {
         if (elements.languageSelector) {
@@ -257,6 +294,9 @@ function setupLanguageHandling() {
     }
 }
 
+/**
+ * Sets up all event listeners for UI interactions
+ */
 function setupEventListeners() {
     elements.navItems.forEach(function(item) {
         item.addEventListener('click', function() {
@@ -306,6 +346,15 @@ function setupEventListeners() {
     if (elements.browseMusicBtn) elements.browseMusicBtn.addEventListener('click', browseMusic);
     if (elements.addMusic) elements.addMusic.addEventListener('change', toggleMusicSettings);
     if (elements.musicVolume) elements.musicVolume.addEventListener('input', updateMusicVolumeDisplay);
+    
+    if (elements.timelapsePreset) elements.timelapsePreset.addEventListener('change', function(e) {
+        const presetKey = e.target.value;
+        if (presetKey && currentPresets[presetKey]) {
+            applyPresetToModal(presetKey, currentPresets[presetKey]);
+        } else {
+            updatePresetDescription(null);
+        }
+    });
 
     if (elements.deleteModalCancel) elements.deleteModalCancel.addEventListener('click', closeDeleteModal);
     if (elements.deleteModalConfirm) elements.deleteModalConfirm.addEventListener('click', confirmDeleteVideo);
@@ -322,11 +371,24 @@ function setupEventListeners() {
     });
 
     if (elements.jpegQuality) elements.jpegQuality.addEventListener('input', updateJpegQualityDisplay);
+    
+    if (elements.sourceType) elements.sourceType.addEventListener('change', toggleSourceType);
+    if (elements.saveProjectBtn) elements.saveProjectBtn.addEventListener('click', saveProject);
+    if (elements.loadProjectBtn) elements.loadProjectBtn.addEventListener('click', loadProject);
+    
+    if (elements.motionDetectionEnabled) elements.motionDetectionEnabled.addEventListener('change', toggleMotionDetectionSettings);
+    if (elements.motionSensitivity) elements.motionSensitivity.addEventListener('input', updateMotionSensitivityDisplay);
+    if (elements.smartSchedulingEnabled) elements.smartSchedulingEnabled.addEventListener('change', toggleSmartSchedulingSettings);
+    
+    setupDayCheckboxes();
 
     setupSettingsEventListeners();
     setupModalEventListeners();
 }
 
+/**
+ * Sets up event listeners for update checking functionality
+ */
 function setupUpdateEventListeners() {
     if (elements.checkUpdatesBtn) {
         elements.checkUpdatesBtn.addEventListener('click', checkForUpdatesManually);
@@ -838,6 +900,28 @@ async function loadCameras() {
     }
 }
 
+async function loadScreenSources() {
+    try {
+        const result = await ipcRenderer.invoke('get-screen-sources');
+        if (result.success) {
+            appState.screenSources = result.sources;
+            updateScreenSelect();
+        }
+    } catch (error) {
+    }
+}
+
+async function loadExportPresets() {
+    try {
+        const result = await ipcRenderer.invoke('get-export-presets');
+        if (result.success) {
+            currentPresets = result.presets;
+            updateExportPresetsUI(result.presets);
+        }
+    } catch (error) {
+    }
+}
+
 async function initializeCameraPreview(deviceId) {
     try {
         const video = elements.cameraPreview;
@@ -863,12 +947,25 @@ async function initializeCameraPreview(deviceId) {
         currentStream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = currentStream;
         
+        const zonesVideo = document.getElementById('zones-camera-preview');
+        if (zonesVideo) {
+            zonesVideo.srcObject = currentStream;
+        }
+        
         video.onloadedmetadata = function() {
             video.play();
+            if (zonesVideo) {
+                zonesVideo.play();
+            }
         };
         
         if (elements.cameraOverlay) {
             elements.cameraOverlay.style.display = 'none';
+        }
+        
+        const zonesOverlay = document.getElementById('zones-camera-overlay');
+        if (zonesOverlay) {
+            zonesOverlay.style.display = 'none';
         }
         if (elements.noCameraMessage) {
             elements.noCameraMessage.style.display = 'none';
@@ -1230,7 +1327,7 @@ function handleProtocolChange() {
     const protocol = elements.uploadProtocol?.value || 'ftp';
     const defaultPort = protocol === 'sftp' ? 22 : 21;
     
-    if (elements.ftpPort && elements.ftpPort.value == (protocol === 'sftp' ? 21 : 22)) {
+    if (elements.ftpPort && elements.ftpPort.value == (protocol === 'sftp' ? 22 : 21)) {
         elements.ftpPort.value = defaultPort;
     }
     
@@ -1354,16 +1451,19 @@ async function createTimelapse() {
         }
 
         const outputName = elements.timelapseOutputName?.value || 'timelapse_video';
+        const resolution = elements.timelapseResolution?.value || '1920x1080';
         const fps = parseInt(elements.timelapseFps?.value) || 30;
         const quality = elements.timelapseQuality?.value || 'high';
+        const format = elements.timelapseFormat?.value || 'mp4';
         const effects = elements.videoEffects?.value || 'none';
+        const presetKey = elements.timelapsePreset?.value;
         
         const firstImagePath = appState.createVideoModal.selectedImages[0];
         const separator = firstImagePath.includes('\\') ? '\\' : '/';
         const inputPath = firstImagePath.split(separator).slice(0, -1).join(separator);
         
         if (!inputPath || inputPath.trim() === '') {
-            showToast('Invalid image directory path', 'error');
+            showToast(i18n.t('errors.invalid_image_path'), 'error');
             return;
         }
         
@@ -1371,10 +1471,13 @@ async function createTimelapse() {
         const options = {
             name: outputName,
             inputPath: inputPath,
+            resolution: resolution,
             fps: fps,
             quality: quality,
+            format: format,
             effects: effects,
-            totalFrames: appState.createVideoModal.selectedImages.length
+            totalFrames: appState.createVideoModal.selectedImages.length,
+            preset: presetKey && currentPresets[presetKey] ? currentPresets[presetKey] : null
         };
 
         if (elements.addMusic?.checked && appState.createVideoModal.musicPath) {
@@ -1712,6 +1815,24 @@ ipcRenderer.on('image-captured', function(event, data) {
     }
 });
 
+ipcRenderer.on('auto-start-capture', function(event, data) {
+    if (appState.settings.cameraSettings?.autoStart) {
+        startCapture();
+        if (appState.settings.notifications?.show) {
+            showToast(i18n.t('toast.auto_capture_started'), 'info');
+        }
+    }
+});
+
+ipcRenderer.on('auto-stop-capture', function(event, data) {
+    if (appState.isCapturing) {
+        stopCapture();
+        if (appState.settings.notifications?.show) {
+            showToast(i18n.t('toast.auto_capture_stopped'), 'info');
+        }
+    }
+});
+
 ipcRenderer.on('ftp-upload-complete', function(event, data) {
     if (appState.settings.notifications?.show && appState.settings.notifications?.uploadComplete) {
         showToast(i18n.t('toast.ftp_uploaded'), 'success');
@@ -1779,6 +1900,275 @@ window.addEventListener('beforeunload', function() {
     ipcRenderer.removeAllListeners('auto-timelapse-upload-error');
 });
 
+function toggleSourceType() {
+    const sourceType = elements.sourceType?.value;
+    
+    if (elements.cameraSelection && elements.screenSelection) {
+        if (sourceType === 'camera') {
+            elements.cameraSelection.style.display = 'block';
+            elements.screenSelection.style.display = 'none';
+        } else if (sourceType === 'screen') {
+            elements.cameraSelection.style.display = 'none';
+            elements.screenSelection.style.display = 'block';
+            loadScreenSources();
+        }
+    }
+}
+
+function updateScreenSelect() {
+    if (!elements.screenSelect || !appState.screenSources) return;
+
+    elements.screenSelect.innerHTML = '';
+    
+    if (appState.screenSources.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = i18n.t('capture.no_screens_available');
+        elements.screenSelect.appendChild(option);
+    } else {
+        appState.screenSources.forEach(function(source) {
+            const option = document.createElement('option');
+            option.value = source.id;
+            option.textContent = source.name;
+            elements.screenSelect.appendChild(option);
+        });
+    }
+}
+
+function toggleMotionDetectionSettings() {
+    if (elements.motionDetectionSettings) {
+        elements.motionDetectionSettings.style.display = elements.motionDetectionEnabled?.checked ? 'block' : 'none';
+    }
+}
+
+function updateMotionSensitivityDisplay() {
+    if (elements.motionSensitivityValue && elements.motionSensitivity) {
+        elements.motionSensitivityValue.textContent = elements.motionSensitivity.value + '%';
+    }
+}
+
+/**
+ * Toggles the visibility of smart scheduling settings
+ */
+function toggleSmartSchedulingSettings() {
+    if (elements.smartSchedulingSettings) {
+        elements.smartSchedulingSettings.style.display = elements.smartSchedulingEnabled?.checked ? 'block' : 'none';
+    }
+}
+
+/**
+ * Sets up event listeners and styling for day selection checkboxes
+ */
+function setupDayCheckboxes() {
+    const dayCheckboxes = document.querySelectorAll('.day-label input[type="checkbox"]');
+    
+    dayCheckboxes.forEach(function(checkbox) {
+        updateDayLabelState(checkbox);
+        
+        checkbox.addEventListener('change', function() {
+            updateDayLabelState(this);
+        });
+    });
+}
+
+/**
+ * Updates the visual state of a day label based on checkbox state
+ * @param {HTMLElement} checkbox - The checkbox element
+ */
+function updateDayLabelState(checkbox) {
+    const dayLabel = checkbox.closest('.day-label');
+    if (dayLabel) {
+        if (checkbox.checked) {
+            dayLabel.classList.add('checked');
+        } else {
+            dayLabel.classList.remove('checked');
+        }
+    }
+}
+
+function updateExportPresetsUI(presets) {
+    if (!elements.exportPresets) return;
+    
+    elements.exportPresets.innerHTML = '';
+    
+    Object.keys(presets).forEach(key => {
+        const preset = presets[key];
+        const presetCard = document.createElement('div');
+        presetCard.className = 'preset-card';
+        presetCard.innerHTML = `
+            <div class="preset-header">
+                <h4>${preset.name}</h4>
+                <p class="preset-description">${preset.description}</p>
+                <div class="preset-details">
+                    <span><i class="fas fa-expand-arrows-alt"></i> ${preset.resolution}</span>
+                    <span><i class="fas fa-tachometer-alt"></i> ${preset.fps}fps</span>
+                    <span><i class="fas fa-adjust"></i> ${preset.quality}</span>
+                    <span><i class="fas fa-video"></i> ${preset.codec.toUpperCase()}</span>
+                </div>
+                <div class="preset-specs">
+                    <small>${preset.aspectRatio} • ${preset.bitrate/1000}k bitrate</small>
+                </div>
+            </div>
+            <button class="btn btn-sm btn-primary" onclick="applyExportPreset('${key}')">
+                <i class="fas fa-magic"></i> Use Preset
+            </button>
+        `;
+        elements.exportPresets.appendChild(presetCard);
+    });
+    
+    if (elements.timelapsePreset) {
+        while (elements.timelapsePreset.options.length > 1) {
+            elements.timelapsePreset.remove(1);
+        }
+        
+        Object.keys(presets).forEach(key => {
+            const preset = presets[key];
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = preset.name;
+            elements.timelapsePreset.appendChild(option);
+        });
+    }
+}
+
+let currentPresets = {};
+
+window.applyExportPreset = async function(presetKey) {
+    try {
+        const result = await ipcRenderer.invoke('get-export-presets');
+        if (result.success) {
+            currentPresets = result.presets;
+            const preset = currentPresets[presetKey];
+            if (preset) {
+                if (elements.timelapseModal && elements.timelapseModal.style.display !== 'none') {
+                    applyPresetToModal(presetKey, preset);
+                } else {
+                    openTimelapseModal();
+                    setTimeout(() => applyPresetToModal(presetKey, preset), 100);
+                }
+                showToast(i18n.t('toast.preset_applied', { name: preset.name }) || `Applied ${preset.name} preset`, 'success');
+            }
+        }
+    } catch (error) {
+        showToast(i18n.t('toast.unexpected_error'), 'error');
+    }
+};
+
+function applyPresetToModal(presetKey, preset) {
+    if (elements.timelapsePreset) {
+        elements.timelapsePreset.value = presetKey;
+        updatePresetDescription(preset);
+    }
+    
+    if (elements.timelapseResolution && preset.resolution) {
+        elements.timelapseResolution.value = preset.resolution;
+    }
+    
+    if (elements.timelapseFps && preset.fps) {
+        elements.timelapseFps.value = preset.fps.toString();
+    }
+    
+    if (elements.timelapseQuality && preset.quality) {
+        elements.timelapseQuality.value = preset.quality;
+    }
+    
+    if (elements.timelapseFormat && preset.codec) {
+        if (preset.codec === 'h265') {
+            elements.timelapseFormat.value = 'mp4_h265';
+        } else if (preset.format === 'webm') {
+            elements.timelapseFormat.value = 'webm';
+        } else {
+            elements.timelapseFormat.value = 'mp4';
+        }
+    }
+}
+
+function updatePresetDescription(preset) {
+    if (elements.presetDescription && preset) {
+        elements.presetDescription.innerHTML = `
+            <small class="preset-info">
+                <i class="fas fa-info-circle"></i> 
+                ${preset.description} • ${preset.aspectRatio} • ${preset.bitrate/1000}k bitrate
+            </small>
+        `;
+    } else if (elements.presetDescription) {
+        elements.presetDescription.innerHTML = '';
+    }
+}
+
+async function saveProject() {
+    try {
+        const projectData = {
+            name: 'Current Project',
+            camera: elements.cameraSelect?.value,
+            resolution: elements.resolutionSelect?.value,
+            interval: elements.intervalValue?.value,
+            watermark: {
+                enabled: elements.addWatermark?.checked,
+                text: elements.watermarkText?.value,
+                position: elements.watermarkPosition?.value
+            },
+            motionDetection: {
+                enabled: elements.motionDetectionEnabled?.checked,
+                sensitivity: elements.motionSensitivity?.value
+            },
+            scheduling: {
+                enabled: elements.smartSchedulingEnabled?.checked,
+                startTime: elements.scheduleStartTime?.value,
+                endTime: elements.scheduleEndTime?.value
+            },
+            totalImages: appState.imageCount,
+            estimatedDuration: 0
+        };
+
+        const result = await ipcRenderer.invoke('save-project', projectData);
+        if (result.success && !result.canceled) {
+            showToast(i18n.t('project.save_success'), 'success');
+        }
+    } catch (error) {
+        showToast(i18n.t('project.save_failed'), 'error');
+    }
+}
+
+async function loadProject() {
+    try {
+        const result = await ipcRenderer.invoke('load-project');
+        if (result.success && !result.canceled) {
+            const project = result.project;
+            
+            if (elements.cameraSelect && project.settings?.camera) elements.cameraSelect.value = project.settings.camera;
+            if (elements.resolutionSelect && project.settings?.resolution) elements.resolutionSelect.value = project.settings.resolution;
+            if (elements.intervalValue && project.settings?.interval) elements.intervalValue.value = project.settings.interval;
+            
+            if (project.settings?.watermark) {
+                if (elements.addWatermark) elements.addWatermark.checked = project.settings.watermark.enabled;
+                if (elements.watermarkText && project.settings.watermark.text) elements.watermarkText.value = project.settings.watermark.text;
+                if (elements.watermarkPosition && project.settings.watermark.position) elements.watermarkPosition.value = project.settings.watermark.position;
+            }
+            
+            if (project.settings?.motionDetection) {
+                if (elements.motionDetectionEnabled) elements.motionDetectionEnabled.checked = project.settings.motionDetection.enabled;
+                if (elements.motionSensitivity && project.settings.motionDetection.sensitivity) elements.motionSensitivity.value = project.settings.motionDetection.sensitivity;
+            }
+            
+            if (project.settings?.scheduling) {
+                if (elements.smartSchedulingEnabled) elements.smartSchedulingEnabled.checked = project.settings.scheduling.enabled;
+                if (elements.scheduleStartTime && project.settings.scheduling.startTime) elements.scheduleStartTime.value = project.settings.scheduling.startTime;
+                if (elements.scheduleEndTime && project.settings.scheduling.endTime) elements.scheduleEndTime.value = project.settings.scheduling.endTime;
+            }
+            
+            toggleMotionDetectionSettings();
+            toggleSmartSchedulingSettings();
+            toggleWatermarkSettings();
+            updateMotionSensitivityDisplay();
+            
+            showToast(`Project "${project.name}" loaded successfully`, 'success');
+        }
+    } catch (error) {
+        showToast(i18n.t('project.load_failed'), 'error');
+    }
+}
+
 ipcRenderer.on('storage-limit-reached', function(event, data) {
     appState.isCapturing = false;
     updateCaptureUI();
@@ -1813,4 +2203,664 @@ ipcRenderer.on('timelapse-complete', function(event, data) {
 ipcRenderer.on('timelapse-error', function(event, data) {
     showToast(i18n.t('toast.video_creation_failed') + ': ' + data.error, 'error');
 });
+
+
+let motionZones = [];
+let cronPatterns = [];
+let seasonalRules = [];
+let holidayExceptions = [];
+
+document.getElementById('noise-filter')?.addEventListener('input', async function(e) {
+    const value = e.target.value;
+    document.getElementById('noise-filter-value').textContent = value;
+    
+    try {
+        const currentSettings = await safeInvoke('get-settings');
+        if (!currentSettings.motionDetection) currentSettings.motionDetection = {};
+        currentSettings.motionDetection.noiseFilter = parseInt(value);
+        await safeInvoke('save-settings', currentSettings);
+    } catch (error) {
+    }
+});
+
+document.getElementById('advanced-scheduling-mode')?.addEventListener('change', async function(e) {
+    const advancedOptions = document.getElementById('advanced-scheduling-options');
+    if (e.target.checked) {
+        advancedOptions.style.display = 'block';
+    } else {
+        advancedOptions.style.display = 'none';
+    }
+    
+    try {
+        const currentSettings = await safeInvoke('get-settings');
+        if (!currentSettings.scheduling) currentSettings.scheduling = {};
+        currentSettings.scheduling.advancedMode = e.target.checked;
+        await safeInvoke('save-settings', currentSettings);
+    } catch (error) {
+    }
+});
+
+let isAddingZone = false;
+let zoneDrawing = null;
+
+document.getElementById('add-motion-zone-btn')?.addEventListener('click', function() {
+    if (isAddingZone) {
+        cancelZoneDrawing();
+        return;
+    }
+    
+    startZoneDrawing();
+});
+
+function startZoneDrawing() {
+    isAddingZone = true;
+    const btn = document.getElementById('add-motion-zone-btn');
+    if (btn) {
+        btn.textContent = 'Cancel';
+        btn.classList.add('btn-secondary');
+        btn.classList.remove('btn-outline');
+    }
+    
+    const previewContainer = document.getElementById('zones-camera-preview-container');
+    if (previewContainer) {
+        previewContainer.style.cursor = 'crosshair';
+        previewContainer.addEventListener('mousedown', startDrawingZone);
+        previewContainer.addEventListener('mousemove', drawingZone);
+        previewContainer.addEventListener('mouseup', finishDrawingZone);
+    }
+    
+    showToast('Click and drag on the camera preview to define a motion zone', 'info');
+}
+
+function cancelZoneDrawing() {
+    isAddingZone = false;
+    const btn = document.getElementById('add-motion-zone-btn');
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-plus"></i><span data-i18n="advanced.add_zone">Add Zone</span>';
+        btn.classList.remove('btn-secondary');
+        btn.classList.add('btn-outline');
+    }
+    
+    const previewContainer = document.getElementById('zones-camera-preview-container');
+    if (previewContainer) {
+        previewContainer.style.cursor = 'default';
+        previewContainer.removeEventListener('mousedown', startDrawingZone);
+        previewContainer.removeEventListener('mousemove', drawingZone);
+        previewContainer.removeEventListener('mouseup', finishDrawingZone);
+    }
+    
+    if (zoneDrawing) {
+        zoneDrawing.remove();
+        zoneDrawing = null;
+    }
+}
+
+function startDrawingZone(e) {
+    if (!isAddingZone) return;
+    
+    const container = document.getElementById('zones-camera-preview-container');
+    const rect = container.getBoundingClientRect();
+    
+    const startX = e.clientX - rect.left;
+    const startY = e.clientY - rect.top;
+    
+    zoneDrawing = document.createElement('div');
+    zoneDrawing.className = 'zone-drawing';
+    zoneDrawing.style.cssText = `
+        position: absolute;
+        left: ${startX}px;
+        top: ${startY}px;
+        width: 0px;
+        height: 0px;
+        border: 2px dashed var(--primary-color);
+        background: rgba(0, 212, 255, 0.1);
+        pointer-events: none;
+        z-index: 15;
+    `;
+    
+    container.appendChild(zoneDrawing);
+    zoneDrawing.startX = startX;
+    zoneDrawing.startY = startY;
+    zoneDrawing.isDrawing = true;
+}
+
+function drawingZone(e) {
+    if (!isAddingZone || !zoneDrawing || !zoneDrawing.isDrawing) return;
+    
+    const container = document.getElementById('zones-camera-preview-container');
+    const rect = container.getBoundingClientRect();
+    
+    const currentX = e.clientX - rect.left;
+    const currentY = e.clientY - rect.top;
+    
+    const left = Math.min(zoneDrawing.startX, currentX);
+    const top = Math.min(zoneDrawing.startY, currentY);
+    const width = Math.abs(currentX - zoneDrawing.startX);
+    const height = Math.abs(currentY - zoneDrawing.startY);
+    
+    zoneDrawing.style.left = left + 'px';
+    zoneDrawing.style.top = top + 'px';
+    zoneDrawing.style.width = width + 'px';
+    zoneDrawing.style.height = height + 'px';
+}
+
+async function finishDrawingZone(e) {
+    if (!isAddingZone || !zoneDrawing || !zoneDrawing.isDrawing) return;
+    
+    const container = document.getElementById('zones-camera-preview-container');
+    const rect = container.getBoundingClientRect();
+    
+    const currentX = e.clientX - rect.left;
+    const currentY = e.clientY - rect.top;
+    
+    const left = Math.min(zoneDrawing.startX, currentX);
+    const top = Math.min(zoneDrawing.startY, currentY);
+    const width = Math.abs(currentX - zoneDrawing.startX);
+    const height = Math.abs(currentY - zoneDrawing.startY);
+    
+    if (width < 20 || height < 20) {
+        showToast('Zone too small. Please draw a larger area.', 'warning');
+        cancelZoneDrawing();
+        return;
+    }
+    
+    const zone = {
+        x: Math.round(left),
+        y: Math.round(top),
+        width: Math.round(width),
+        height: Math.round(height),
+        name: `Zone ${motionZones.length + 1}`
+    };
+    
+    try {
+        const result = await safeInvoke('add-motion-zone', zone);
+        if (result.success) {
+            await loadMotionZones();
+            showToast(i18n.t('toast.motion_zone_added'), 'success');
+        } else {
+            showToast('Failed to add motion zone: ' + result.error, 'error');
+        }
+    } catch (error) {
+        showToast('Error adding motion zone: ' + error.message, 'error');
+    }
+    
+    cancelZoneDrawing();
+}
+
+document.getElementById('clear-motion-zones-btn')?.addEventListener('click', async function() {
+    try {
+        for (const zone of motionZones) {
+            await safeInvoke('remove-motion-zone', zone.id);
+        }
+        await loadMotionZones();
+        showToast(i18n.t('toast.motion_zones_cleared'), 'success');
+    } catch (error) {
+        showToast('Error clearing motion zones: ' + error.message, 'error');
+    }
+});
+
+async function loadMotionZones() {
+    try {
+        motionZones = await safeInvoke('get-motion-zones');
+        renderMotionZones();
+    } catch (error) {
+    }
+}
+
+function renderMotionZones() {
+    const zonesList = document.getElementById('motion-zones-list');
+    if (!zonesList) return;
+    
+    if (motionZones.length === 0) {
+        zonesList.innerHTML = '<div class="zones-empty" data-i18n="advanced.no_zones">No motion zones defined. Click \'Add Zone\' to create detection areas.</div>';
+        clearVisualZones();
+        return;
+    }
+    
+    zonesList.innerHTML = motionZones.map(zone => `
+        <div class="zone-item" data-zone-id="${zone.id}">
+            <div>
+                <div class="zone-name">${zone.name}</div>
+                <div class="zone-coords">Position: ${zone.x}, ${zone.y} | Size: ${zone.width}×${zone.height}</div>
+            </div>
+            <button class="item-remove" onclick="removeMotionZone(${zone.id})">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `).join('');
+    
+    renderVisualZones();
+}
+
+function renderVisualZones() {
+    clearVisualZones();
+    
+    const previewContainer = document.getElementById('zones-camera-preview-container');
+    if (!previewContainer) return;
+    
+    motionZones.forEach((zone, index) => {
+        const zoneElement = document.createElement('div');
+        zoneElement.className = 'motion-zone-overlay';
+        zoneElement.style.cssText = `
+            position: absolute;
+            left: ${zone.x}px;
+            top: ${zone.y}px;
+            width: ${zone.width}px;
+            height: ${zone.height}px;
+            border: 2px solid var(--primary-color);
+            background: rgba(0, 212, 255, 0.15);
+            pointer-events: none;
+            z-index: 10;
+        `;
+        
+        const label = document.createElement('div');
+        label.className = 'zone-label';
+        label.textContent = zone.name;
+        label.style.cssText = `
+            position: absolute;
+            top: -25px;
+            left: 0;
+            background: var(--primary-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            white-space: nowrap;
+        `;
+        
+        zoneElement.appendChild(label);
+        previewContainer.appendChild(zoneElement);
+    });
+}
+
+function clearVisualZones() {
+    const previewContainer = document.getElementById('zones-camera-preview-container');
+    if (!previewContainer) return;
+    
+    const existingZones = previewContainer.querySelectorAll('.motion-zone-overlay');
+    existingZones.forEach(zone => zone.remove());
+}
+
+async function removeMotionZone(zoneId) {
+    try {
+        const result = await safeInvoke('remove-motion-zone', zoneId);
+        if (result.success) {
+            await loadMotionZones();
+            showToast('Motion zone removed', 'success');
+        } else {
+            showToast('Failed to remove motion zone: ' + result.error, 'error');
+        }
+    } catch (error) {
+        showToast('Error removing motion zone: ' + error.message, 'error');
+    }
+}
+
+document.getElementById('add-cron-pattern-btn')?.addEventListener('click', async function() {
+    const input = document.getElementById('cron-pattern-input');
+    const pattern = input.value.trim();
+    
+    if (!pattern) {
+        showToast(i18n.t('toast.please_enter_cron_pattern'), 'warning');
+        return;
+    }
+    
+    try {
+        const currentSettings = await safeInvoke('get-settings');
+        if (!currentSettings.scheduling) currentSettings.scheduling = {};
+        if (!currentSettings.scheduling.cronPatterns) currentSettings.scheduling.cronPatterns = [];
+        
+        try {
+            const parts = pattern.split(' ');
+            if (parts.length < 5) {
+                throw new Error('Cron pattern must have at least 5 parts');
+            }
+        } catch (validationError) {
+            showToast(i18n.t('toast.invalid_cron_pattern') + ': ' + validationError.message, 'error');
+            return;
+        }
+        
+        currentSettings.scheduling.cronPatterns.push(pattern);
+        await safeInvoke('save-settings', currentSettings);
+        
+        input.value = '';
+        await loadCronPatterns();
+        showToast(i18n.t('toast.cron_pattern_added'), 'success');
+    } catch (error) {
+        showToast('Error adding cron pattern: ' + error.message, 'error');
+    }
+});
+
+async function loadCronPatterns() {
+    try {
+        const settings = await safeInvoke('get-settings');
+        if (settings && settings.scheduling) {
+            cronPatterns = settings.scheduling.cronPatterns || [];
+        } else {
+            cronPatterns = [];
+        }
+        renderCronPatterns();
+    } catch (error) {
+        cronPatterns = [];
+        renderCronPatterns();
+    }
+}
+
+function renderCronPatterns() {
+    const patternsList = document.getElementById('cron-patterns-list');
+    if (!patternsList) return;
+    
+    if (cronPatterns.length === 0) {
+        patternsList.innerHTML = '<div class="patterns-empty" data-i18n="advanced.no_patterns">No cron patterns defined. Add patterns for advanced scheduling.</div>';
+        return;
+    }
+    
+    patternsList.innerHTML = cronPatterns.map((pattern, index) => `
+        <div class="pattern-item" data-pattern-index="${index}">
+            <div>
+                <div class="pattern-text">${pattern}</div>
+                <div class="pattern-desc">${getCronDescription(pattern)}</div>
+            </div>
+            <button class="item-remove" onclick="removeCronPattern(${index})">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+function getCronDescription(pattern) {
+    const parts = pattern.split(' ');
+    if (parts.length >= 6) {
+        return `Every ${parts[1]} min, ${parts[2]} hour`;
+    }
+    return 'Custom pattern';
+}
+
+async function removeCronPattern(index) {
+    try {
+        cronPatterns.splice(index, 1);
+        
+        const currentSettings = await safeInvoke('get-settings');
+        if (!currentSettings.scheduling) currentSettings.scheduling = {};
+        currentSettings.scheduling.cronPatterns = cronPatterns;
+        await safeInvoke('save-settings', currentSettings);
+        
+        renderCronPatterns();
+        showToast(i18n.t('toast.cron_pattern_removed'), 'success');
+    } catch (error) {
+        showToast('Error removing cron pattern: ' + error.message, 'error');
+    }
+}
+
+document.getElementById('add-seasonal-rule-btn')?.addEventListener('click', function() {
+    showSeasonalRuleDialog();
+});
+
+function showSeasonalRuleDialog() {
+    const dialog = document.createElement('div');
+    dialog.innerHTML = `
+        <div class="seasonal-dialog-backdrop"></div>
+        <div class="seasonal-dialog">
+            <h4>Add Seasonal Rule</h4>
+            <div class="form-group">
+                <label>Select Months:</label>
+                <div class="months-selector">
+                    ${Array.from({length: 12}, (_, i) => `
+                        <div class="month-checkbox" data-month="${i + 1}">
+                            <input type="checkbox" id="month-${i + 1}" value="${i + 1}">
+                            <span class="checkbox-custom"></span>
+                            <label for="month-${i + 1}">${new Date(2000, i, 1).toLocaleDateString('en', {month: 'short'})}</label>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="seasonal-start">Start Time:</label>
+                <input type="time" id="seasonal-start" value="07:00">
+            </div>
+            <div class="form-group">
+                <label for="seasonal-end">End Time:</label>
+                <input type="time" id="seasonal-end" value="19:00">
+            </div>
+            <div class="seasonal-dialog-actions">
+                <button class="btn btn-outline" onclick="closeSeasonalDialog()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveSeasonalRule()">Add Rule</button>
+            </div>
+        </div>
+    `;
+    
+    dialog.querySelectorAll('.month-checkbox').forEach(checkboxDiv => {
+        checkboxDiv.addEventListener('click', function(e) {
+            if (e.target.type === 'checkbox') return;
+            
+            const input = this.querySelector('input[type="checkbox"]');
+            input.checked = !input.checked;
+            
+            input.dispatchEvent(new Event('change'));
+        });
+        
+        const input = checkboxDiv.querySelector('input[type="checkbox"]');
+        input.addEventListener('change', function() {
+        });
+    });
+    
+    document.body.appendChild(dialog);
+}
+
+async function saveSeasonalRule() {
+    const selectedMonths = Array.from(document.querySelectorAll('.month-checkbox input[type="checkbox"]:checked')).map(input => parseInt(input.value));
+    const startTime = document.getElementById('seasonal-start').value;
+    const endTime = document.getElementById('seasonal-end').value;
+    
+    if (selectedMonths.length === 0) {
+        showToast(i18n.t('toast.please_select_months'), 'warning');
+        return;
+    }
+    
+    const rule = {
+        months: selectedMonths,
+        startTime: startTime,
+        endTime: endTime
+    };
+    
+    try {
+        const currentSettings = await safeInvoke('get-settings');
+        if (!currentSettings.scheduling) currentSettings.scheduling = {};
+        if (!currentSettings.scheduling.seasonalRules) currentSettings.scheduling.seasonalRules = [];
+        
+        currentSettings.scheduling.seasonalRules.push(rule);
+        await safeInvoke('save-settings', currentSettings);
+        
+        await loadSeasonalRules();
+        closeSeasonalDialog();
+        showToast(i18n.t('toast.seasonal_rule_added'), 'success');
+    } catch (error) {
+        showToast('Error adding seasonal rule: ' + error.message, 'error');
+    }
+}
+
+function closeSeasonalDialog() {
+    const dialog = document.querySelector('.seasonal-dialog-backdrop').parentElement;
+    if (dialog) {
+        dialog.remove();
+    }
+}
+
+async function loadSeasonalRules() {
+    try {
+        const settings = await safeInvoke('get-settings');
+        if (settings && settings.scheduling) {
+            seasonalRules = settings.scheduling.seasonalRules || [];
+        } else {
+            seasonalRules = [];
+        }
+        renderSeasonalRules();
+    } catch (error) {
+        seasonalRules = [];
+        renderSeasonalRules();
+    }
+}
+
+function renderSeasonalRules() {
+    const rulesList = document.getElementById('seasonal-rules-list');
+    if (!rulesList) return;
+    
+    if (seasonalRules.length === 0) {
+        rulesList.innerHTML = '<div class="rules-empty" data-i18n="advanced.no_seasonal">No seasonal rules defined. Add rules for different months/seasons.</div>';
+        return;
+    }
+    
+    rulesList.innerHTML = seasonalRules.map((rule, index) => `
+        <div class="rule-item" data-rule-index="${index}">
+            <div>
+                <div class="rule-text">Months: ${rule.months.join(', ')}</div>
+                <div class="rule-desc">${rule.startTime} - ${rule.endTime}</div>
+            </div>
+            <button class="item-remove" onclick="removeSeasonalRule(${index})">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+async function removeSeasonalRule(index) {
+    try {
+        seasonalRules.splice(index, 1);
+        
+        const currentSettings = await safeInvoke('get-settings');
+        if (!currentSettings.scheduling) currentSettings.scheduling = {};
+        currentSettings.scheduling.seasonalRules = seasonalRules;
+        await safeInvoke('save-settings', currentSettings);
+        
+        renderSeasonalRules();
+        showToast(i18n.t('toast.seasonal_rule_removed'), 'success');
+    } catch (error) {
+        showToast('Error removing seasonal rule: ' + error.message, 'error');
+    }
+}
+
+document.getElementById('add-exception-btn')?.addEventListener('click', async function() {
+    const input = document.getElementById('exception-date-input');
+    const date = input.value;
+    
+    if (!date) {
+        showToast(i18n.t('toast.please_select_date'), 'warning');
+        return;
+    }
+    
+    const exception = {
+        date: date,
+        action: 'skip'
+    };
+    
+    try {
+        const currentSettings = await safeInvoke('get-settings');
+        if (!currentSettings.scheduling) currentSettings.scheduling = {};
+        if (!currentSettings.scheduling.exceptions) currentSettings.scheduling.exceptions = [];
+        
+        currentSettings.scheduling.exceptions.push(exception);
+        await safeInvoke('save-settings', currentSettings);
+        
+        input.value = '';
+        await loadHolidayExceptions();
+        showToast(i18n.t('toast.exception_added'), 'success');
+    } catch (error) {
+        showToast('Error adding exception: ' + error.message, 'error');
+    }
+});
+
+async function loadHolidayExceptions() {
+    try {
+        const settings = await safeInvoke('get-settings');
+        if (settings && settings.scheduling) {
+            holidayExceptions = settings.scheduling.exceptions || [];
+        } else {
+            holidayExceptions = [];
+        }
+        renderHolidayExceptions();
+    } catch (error) {
+        holidayExceptions = [];
+        renderHolidayExceptions();
+    }
+}
+
+function renderHolidayExceptions() {
+    const exceptionsList = document.getElementById('exceptions-list');
+    if (!exceptionsList) return;
+    
+    if (holidayExceptions.length === 0) {
+        exceptionsList.innerHTML = '<div class="exceptions-empty" data-i18n="advanced.no_exceptions">No exceptions defined. Add dates to skip capture.</div>';
+        return;
+    }
+    
+    exceptionsList.innerHTML = holidayExceptions.map((exception, index) => `
+        <div class="exception-item" data-exception-index="${index}">
+            <div>
+                <div class="exception-text">${exception.date}</div>
+                <div class="exception-desc">Skip capture</div>
+            </div>
+            <button class="item-remove" onclick="removeHolidayException(${index})">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+async function removeHolidayException(index) {
+    try {
+        holidayExceptions.splice(index, 1);
+        
+        const currentSettings = await safeInvoke('get-settings');
+        if (!currentSettings.scheduling) currentSettings.scheduling = {};
+        currentSettings.scheduling.exceptions = holidayExceptions;
+        await safeInvoke('save-settings', currentSettings);
+        
+        renderHolidayExceptions();
+        showToast(i18n.t('toast.exception_removed'), 'success');
+    } catch (error) {
+        showToast('Error removing exception: ' + error.message, 'error');
+    }
+}
+
+async function initializeAdvancedFeatures() {
+    try {
+        const settings = await safeInvoke('get-settings');
+        const motionSettings = settings.motionDetection || {};
+        const schedulingSettings = settings.scheduling || {};
+        
+        const noiseFilter = document.getElementById('noise-filter');
+        if (noiseFilter) {
+            noiseFilter.value = motionSettings.noiseFilter || 15;
+            const valueDisplay = document.getElementById('noise-filter-value');
+            if (valueDisplay) {
+                valueDisplay.textContent = noiseFilter.value;
+            }
+        }
+        
+        const advancedMode = document.getElementById('advanced-scheduling-mode');
+        if (advancedMode) {
+            advancedMode.checked = schedulingSettings.advancedMode || false;
+            const advancedOptions = document.getElementById('advanced-scheduling-options');
+            if (advancedOptions) {
+                advancedOptions.style.display = advancedMode.checked ? 'block' : 'none';
+            }
+        }
+        
+        await loadMotionZones();
+        await loadCronPatterns();
+        await loadSeasonalRules();
+        await loadHolidayExceptions();
+    } catch (error) {
+    }
+}
+
+window.removeMotionZone = removeMotionZone;
+window.removeCronPattern = removeCronPattern;
+window.removeSeasonalRule = removeSeasonalRule;
+window.removeHolidayException = removeHolidayException;
+window.saveSeasonalRule = saveSeasonalRule;
+window.closeSeasonalDialog = closeSeasonalDialog;
+
+setTimeout(() => {
+    initializeAdvancedFeatures();
+}, 1000);
 

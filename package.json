@@ -1,7 +1,7 @@
 {
   "name": "timelapse-webcam",
-  "version": "1.0.0",
-  "description": "Create stunning timelapse videos from your webcam with automatic capture, FTP upload, professional video creation, and advanced text/image watermarking support.",
+  "version": "1.1.0",
+  "description": "Desktop application for creating timelapse videos from webcam and screen sources with automated capture, FTP upload, video processing, and watermarking capabilities.",
   "main": "main.js",
   "author": "Bavamont",
   "homepage": "https://github.com/bavamont/timelapse-webcam",

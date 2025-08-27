@@ -4,6 +4,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     invoke: (channel, ...args) => {
         const validChannels = [
             'get-cameras',
+            'get-screen-sources',
+            'detect-motion',
+            'save-project',
+            'load-project',
+            'get-export-presets',
             'start-capture',
             'stop-capture',
             'pause-capture',
@@ -20,6 +25,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
             'export-video',
             'delete-video',
             'get-storage-info',
+            'cleanup-old-files',
             'check-for-updates',
             'download-update',
             'install-update',
@@ -33,7 +39,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
             'window-focus',
             'window-minimize',
             'window-maximize',
-            'window-close'
+            'window-close',
+            'add-motion-zone',
+            'remove-motion-zone',
+            'get-motion-zones',
+            'add-cron-pattern',
+            'add-seasonal-rule',
+            'add-schedule-exception'
         ];
         if (validChannels.includes(channel)) {
             return ipcRenderer.invoke(channel, ...args);
@@ -55,6 +67,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
             'capture-resumed',
             'image-captured',
             'capture-error',
+            'auto-start-capture',
+            'auto-stop-capture',
             'ftp-upload-complete',
             'ftp-upload-error',
             'camera-error',
@@ -93,6 +107,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
             'capture-resumed',
             'image-captured',
             'capture-error',
+            'auto-start-capture',
+            'auto-stop-capture',
             'ftp-upload-complete',
             'ftp-upload-error',
             'camera-error',

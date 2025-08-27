@@ -32,7 +32,7 @@
         <header class="app-header" id="app-header">
             <div class="header-content">
                 <div class="header-left">
-                    <h1><img src="./assets/logo.svg" alt="Timelapse Webcam" class="header-logo"> <span data-i18n="app.title">Timelapse Webcam</span></h1>
+                    <h1><img src="./assets/logo.svg" alt="Timelapse Webcam" class="header-logo"> <span data-i18n="app.title">Timelapse Webcam</span> <span class="version-badge">v1.1.0</span></h1>
                     <p data-i18n="app.subtitle">Create stunning timelapse videos from your webcam</p>
                 </div>
                 <div class="header-right">
@@ -40,6 +40,14 @@
                         <div class="status-indicator" id="status-indicator"></div>
                         <span id="capture-status-text" data-i18n="capture.status_stopped">Stopped</span>
                     </div>
+                    <button class="btn btn-sm btn-outline" id="save-project-btn">
+                        <i class="fas fa-save"></i>
+                        <span data-i18n="project.save">Save Project</span>
+                    </button>
+                    <button class="btn btn-sm btn-outline" id="load-project-btn">
+                        <i class="fas fa-folder-open"></i>
+                        <span data-i18n="project.load">Load Project</span>
+                    </button>
                     <button class="btn btn-sm btn-outline" id="check-updates-btn">
                         <i class="fas fa-sync-alt"></i>
                         <span data-i18n="updater.check_updates">Check for Updates</span>
@@ -113,12 +121,33 @@
                             </div>
                             <div class="card-body">
                                 <div class="form-group">
+                                    <label for="source-type">
+                                        <i class="fas fa-video"></i>
+                                        <span data-i18n="capture.source_type">Source Type</span>
+                                    </label>
+                                    <select id="source-type">
+                                        <option value="camera" data-i18n="capture.source_camera">Webcam</option>
+                                        <option value="screen" data-i18n="capture.source_screen">Screen</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" id="camera-selection">
                                     <label for="camera-select">
                                         <i class="fas fa-camera"></i>
                                         <span data-i18n="capture.select_camera">Select Camera</span>
                                     </label>
                                     <select id="camera-select">
                                         <option value="" data-i18n="capture.no_cameras_available">No cameras available</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" id="screen-selection" style="display: none;">
+                                    <label for="screen-select">
+                                        <i class="fas fa-desktop"></i>
+                                        <span data-i18n="capture.select_screen">Select Screen/Window</span>
+                                    </label>
+                                    <select id="screen-select">
+                                        <option value="" data-i18n="capture.no_screens_available">No screens available</option>
                                     </select>
                                 </div>
 
@@ -409,9 +438,9 @@
                                         <span data-i18n="settings.image_format">Image Format</span>
                                     </label>
                                     <select id="image-format">
-                                        <option value="jpeg" selected>JPEG</option>
-                                        <option value="png">PNG</option>
-                                        <option value="webp">WebP</option>
+                                        <option value="jpeg" selected data-i18n="formats.jpeg">JPEG</option>
+                                        <option value="png" data-i18n="formats.png">PNG</option>
+                                        <option value="webp" data-i18n="formats.webp">WebP</option>
                                     </select>
                                 </div>
 
@@ -734,8 +763,242 @@
                                 </label>
                             </div>
                         </div>
+
+                        <div class="card settings-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-running"></i> <span data-i18n="advanced.motion_detection">Motion Detection</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="motion-detection-enabled">
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="advanced.enable_motion_detection">Enable Motion Detection</span>
+                                </label>
+
+                                <div class="motion-detection-settings" id="motion-detection-settings" style="display: none;">
+                                    <div class="form-group">
+                                        <label for="motion-sensitivity">
+                                            <i class="fas fa-adjust"></i>
+                                            <span data-i18n="advanced.motion_sensitivity">Motion Sensitivity</span>
+                                        </label>
+                                        <div class="sensitivity-slider">
+                                            <input type="range" id="motion-sensitivity" min="10" max="100" value="50">
+                                            <span id="motion-sensitivity-value">50%</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="motion-cooldown">
+                                            <i class="fas fa-clock"></i>
+                                            <span data-i18n="advanced.motion_cooldown_label">Cooldown (seconds)</span>
+                                        </label>
+                                        <input type="number" id="motion-cooldown" value="5" min="1" max="60">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="noise-filter">
+                                            <i class="fas fa-filter"></i>
+                                            <span data-i18n="advanced.noise_filter">Noise Filter Threshold</span>
+                                        </label>
+                                        <div class="noise-slider">
+                                            <input type="range" id="noise-filter" min="1" max="50" value="15">
+                                            <span id="noise-filter-value">15</span>
+                                        </div>
+                                        <small data-i18n="advanced.noise_filter_help">Higher values filter out more noise but may miss subtle motion</small>
+                                    </div>
+
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="motion-only-capture">
+                                        <span class="checkbox-custom"></span>
+                                        <span data-i18n="advanced.motion_only_capture">Only capture when motion detected</span>
+                                    </label>
+
+                                    <div class="form-group motion-zones-section">
+                                        <label>
+                                            <i class="fas fa-vector-square"></i>
+                                            <span data-i18n="advanced.motion_zones">Motion Detection Zones</span>
+                                        </label>
+                                        <div class="zones-controls">
+                                            <button type="button" class="btn btn-sm btn-outline" id="add-motion-zone-btn">
+                                                <i class="fas fa-plus"></i>
+                                                <span data-i18n="advanced.add_zone">Add Zone</span>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline" id="clear-motion-zones-btn">
+                                                <i class="fas fa-trash"></i>
+                                                <span data-i18n="advanced.clear_zones">Clear All</span>
+                                            </button>
+                                        </div>
+                                        <div class="zones-preview-container">
+                                            <div class="camera-preview-container" id="zones-camera-preview-container">
+                                                <video id="zones-camera-preview" class="camera-preview" autoplay muted playsinline></video>
+                                                <div class="camera-overlay" id="zones-camera-overlay">
+                                                    <div class="no-camera-message" id="zones-no-camera-message">
+                                                        <i class="fas fa-video-slash"></i>
+                                                        <p data-i18n="advanced.no_camera_zones">No camera detected. Enable camera to set motion zones.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="motion-zones-list" class="zones-list">
+                                            <div class="zones-empty" data-i18n="advanced.no_zones">No motion zones defined. Click 'Add Zone' to create detection areas.</div>
+                                        </div>
+                                        <small data-i18n="advanced.zones_help">Motion zones allow you to monitor specific areas of the camera view</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card settings-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-calendar-alt"></i> <span data-i18n="advanced.smart_scheduling">Smart Scheduling</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="smart-scheduling-enabled">
+                                    <span class="checkbox-custom"></span>
+                                    <span data-i18n="advanced.enable_smart_scheduling">Enable Smart Scheduling</span>
+                                </label>
+
+                                <div class="smart-scheduling-settings" id="smart-scheduling-settings" style="display: none;">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="schedule-start-time">
+                                                <i class="fas fa-play"></i>
+                                                <span data-i18n="advanced.start_time">Start Time</span>
+                                            </label>
+                                            <input type="time" id="schedule-start-time" value="08:00">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="schedule-end-time">
+                                                <i class="fas fa-stop"></i>
+                                                <span data-i18n="advanced.end_time">End Time</span>
+                                            </label>
+                                            <input type="time" id="schedule-end-time" value="18:00">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>
+                                            <i class="fas fa-calendar-week"></i>
+                                            <span data-i18n="advanced.active_days">Active Days</span>
+                                        </label>
+                                        <div class="days-selector">
+                                            <label class="checkbox-label day-label">
+                                                <input type="checkbox" id="day-1" value="1" checked>
+                                                <span class="checkbox-custom"></span>
+                                                <span data-i18n="days.mon">Mon</span>
+                                            </label>
+                                            <label class="checkbox-label day-label">
+                                                <input type="checkbox" id="day-2" value="2" checked>
+                                                <span class="checkbox-custom"></span>
+                                                <span data-i18n="days.tue">Tue</span>
+                                            </label>
+                                            <label class="checkbox-label day-label">
+                                                <input type="checkbox" id="day-3" value="3" checked>
+                                                <span class="checkbox-custom"></span>
+                                                <span data-i18n="days.wed">Wed</span>
+                                            </label>
+                                            <label class="checkbox-label day-label">
+                                                <input type="checkbox" id="day-4" value="4" checked>
+                                                <span class="checkbox-custom"></span>
+                                                <span data-i18n="days.thu">Thu</span>
+                                            </label>
+                                            <label class="checkbox-label day-label">
+                                                <input type="checkbox" id="day-5" value="5" checked>
+                                                <span class="checkbox-custom"></span>
+                                                <span data-i18n="days.fri">Fri</span>
+                                            </label>
+                                            <label class="checkbox-label day-label">
+                                                <input type="checkbox" id="day-6" value="6">
+                                                <span class="checkbox-custom"></span>
+                                                <span data-i18n="days.sat">Sat</span>
+                                            </label>
+                                            <label class="checkbox-label day-label">
+                                                <input type="checkbox" id="day-0" value="0">
+                                                <span class="checkbox-custom"></span>
+                                                <span data-i18n="days.sun">Sun</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group advanced-scheduling">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="advanced-scheduling-mode">
+                                            <span class="checkbox-custom"></span>
+                                            <span data-i18n="advanced.enable_advanced_mode">Enable Advanced Scheduling</span>
+                                        </label>
+                                    </div>
+
+                                    <div id="advanced-scheduling-options" style="display: none;">
+                                        <div class="form-group cron-section">
+                                            <label>
+                                                <i class="fas fa-code"></i>
+                                                <span data-i18n="advanced.cron_patterns">Cron Patterns</span>
+                                            </label>
+                                            <div class="cron-controls">
+                                                <input type="text" id="cron-pattern-input" placeholder="0 */15 * * * *" data-i18n-placeholder="placeholder.cron_pattern">
+                                                <button type="button" class="btn btn-sm btn-primary" id="add-cron-pattern-btn">
+                                                    <i class="fas fa-plus"></i>
+                                                    <span data-i18n="advanced.add_pattern">Add</span>
+                                                </button>
+                                            </div>
+                                            <div id="cron-patterns-list" class="patterns-list">
+                                                <div class="patterns-empty" data-i18n="advanced.no_patterns">No cron patterns defined. Add patterns for advanced scheduling.</div>
+                                            </div>
+                                            <small data-i18n="advanced.cron_help">Use cron expressions for precise scheduling (e.g., "0 */15 * * * *" = every 15 minutes)</small>
+                                        </div>
+
+                                        <div class="form-group seasonal-section">
+                                            <label>
+                                                <i class="fas fa-leaf"></i>
+                                                <span data-i18n="advanced.seasonal_rules">Seasonal Rules</span>
+                                            </label>
+                                            <div class="seasonal-controls">
+                                                <button type="button" class="btn btn-sm btn-outline" id="add-seasonal-rule-btn">
+                                                    <i class="fas fa-plus"></i>
+                                                    <span data-i18n="advanced.add_seasonal">Add Seasonal Rule</span>
+                                                </button>
+                                            </div>
+                                            <div id="seasonal-rules-list" class="rules-list">
+                                                <div class="rules-empty" data-i18n="advanced.no_seasonal">No seasonal rules defined. Add rules for different months/seasons.</div>
+                                            </div>
+                                            <small data-i18n="advanced.seasonal_help">Define different schedules for different months or seasons</small>
+                                        </div>
+
+                                        <div class="form-group exceptions-section">
+                                            <label>
+                                                <i class="fas fa-calendar-times"></i>
+                                                <span data-i18n="advanced.holiday_exceptions">Holiday Exceptions</span>
+                                            </label>
+                                            <div class="exceptions-controls">
+                                                <input type="date" id="exception-date-input">
+                                                <button type="button" class="btn btn-sm btn-outline" id="add-exception-btn">
+                                                    <i class="fas fa-plus"></i>
+                                                    <span data-i18n="advanced.add_exception">Add Exception</span>
+                                                </button>
+                                            </div>
+                                            <div id="exceptions-list" class="exceptions-list">
+                                                <div class="exceptions-empty" data-i18n="advanced.no_exceptions">No exceptions defined. Add dates to skip capture.</div>
+                                            </div>
+                                            <small data-i18n="advanced.exceptions_help">Skip capture on specific dates (holidays, maintenance, etc.)</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card settings-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-download"></i> <span data-i18n="advanced.export_presets">Export Presets</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="preset-grid" id="export-presets">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
 
                 <div class="tab-content" id="help-tab">
                     <div class="page-header">
@@ -783,6 +1046,32 @@
                                     <div class="feature-item" data-i18n="help.feature6">Hardware-accelerated encoding and auto-start on app launch</div>
                                     <div class="feature-item" data-i18n="help.feature7">Storage management with auto-cleanup and size limits</div>
                                     <div class="feature-item" data-i18n="help.feature8">FTP/SFTP upload support for automated file transfer</div>
+                                    <div class="feature-item" data-i18n="help.feature9">Motion detection with configurable sensitivity and cooldown periods</div>
+                                    <div class="feature-item" data-i18n="help.feature10">Screen and window recording in addition to webcam capture</div>
+                                    <div class="feature-item" data-i18n="help.feature11">Smart scheduling with time-based automation and day selection</div>
+                                    <div class="feature-item" data-i18n="help.feature12">Export presets optimized for YouTube, Instagram, TikTok, and other platforms</div>
+                                    <div class="feature-item" data-i18n="help.feature13">Project management system for saving and loading configurations</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card help-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-info-circle"></i> <span data-i18n="help.version_info">Version Information</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="version-info">
+                                    <p><strong data-i18n="help.current_version">Current Version: 1.1.0</strong></p>
+                                    <p data-i18n="help.release_date">Release Date: August 25, 2025</p>
+                                    
+                                    <h4 data-i18n="help.whats_new">What's New in Version 1.1.0</h4>
+                                    <div class="feature-grid">
+                                        <div class="feature-item" data-i18n="help.new_feature1">Motion Detection: Automatically capture only when movement is detected</div>
+                                        <div class="feature-item" data-i18n="help.new_feature2">Screen Recording: Capture desktop screens and application windows</div>
+                                        <div class="feature-item" data-i18n="help.new_feature3">Smart Scheduling: Schedule captures for specific times and days</div>
+                                        <div class="feature-item" data-i18n="help.new_feature4">Export Presets: Quick settings for popular video platforms</div>
+                                        <div class="feature-item" data-i18n="help.new_feature5">Project Management: Save and load complete project configurations</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -894,6 +1183,57 @@
                                         <div class="feature-item" data-i18n="help.format_note3">JPEG is ideal for webcam captures with adjustable quality (50-100%)</div>
                                         <div class="feature-item" data-i18n="help.format_note4">PNG preserves quality for watermarks and graphics</div>
                                         <div class="feature-item" data-i18n="help.format_note5">WebP offers modern compression for high-quality captures</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card help-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-magic"></i> <span data-i18n="help.export_presets">Export Presets</span></h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="settings-help">
+                                    <p data-i18n="help.export_presets_intro">Export presets provide optimized video settings for different platforms and use cases. Each preset includes specific resolution, frame rate, codec, and bitrate settings.</p>
+                                    
+                                    <div class="setting-item">
+                                        <h5 data-i18n="help.preset_youtube">YouTube (1080p HD):</h5>
+                                        <p data-i18n="help.preset_youtube_desc">1920x1080 resolution, 30fps, H.264 codec, 8Mbps bitrate. Optimized for standard YouTube uploads with excellent quality and compatibility.</p>
+                                    </div>
+
+                                    <div class="setting-item">
+                                        <h5 data-i18n="help.preset_youtube_4k">YouTube 4K:</h5>
+                                        <p data-i18n="help.preset_youtube_4k_desc">3840x2160 resolution, 30fps, H.264 codec, 40Mbps bitrate. Premium quality for 4K YouTube content with maximum detail.</p>
+                                    </div>
+
+                                    <div class="setting-item">
+                                        <h5 data-i18n="help.preset_instagram_reels">Instagram Reels:</h5>
+                                        <p data-i18n="help.preset_instagram_reels_desc">1080x1920 vertical format, 30fps, H.264 codec, 5Mbps bitrate. Perfect aspect ratio for Instagram Reels and Stories.</p>
+                                    </div>
+
+                                    <div class="setting-item">
+                                        <h5 data-i18n="help.preset_instagram_feed">Instagram Feed:</h5>
+                                        <p data-i18n="help.preset_instagram_feed_desc">1080x1080 square format, 30fps, H.264 codec, 5Mbps bitrate. Ideal for Instagram feed posts with consistent square framing.</p>
+                                    </div>
+
+                                    <div class="setting-item">
+                                        <h5 data-i18n="help.preset_tiktok">TikTok:</h5>
+                                        <p data-i18n="help.preset_tiktok_desc">1080x1920 vertical format, 30fps, H.264 codec, 5Mbps bitrate. Optimized for TikTok's mobile-first vertical video format.</p>
+                                    </div>
+
+                                    <div class="setting-item">
+                                        <h5 data-i18n="help.preset_web">Web Optimized:</h5>
+                                        <p data-i18n="help.preset_web_desc">1280x720 resolution, 24fps, H.264 codec, 3.5Mbps bitrate. Lightweight format for web streaming and email sharing.</p>
+                                    </div>
+
+                                    <div class="setting-item">
+                                        <h5 data-i18n="help.preset_archive">Archive Quality:</h5>
+                                        <p data-i18n="help.preset_archive_desc">3840x2160 resolution, 60fps, H.265 codec, 60Mbps bitrate. Maximum quality preservation for archival and professional use.</p>
+                                    </div>
+
+                                    <div class="setting-item">
+                                        <h5 data-i18n="help.preset_usage">How to Use Presets:</h5>
+                                        <p data-i18n="help.preset_usage_desc">Navigate to Settings → Export Presets and click "Use Preset" on any preset card. This will open the timelapse creation modal with all settings automatically configured. You can also select presets directly in the timelapse creation dialog.</p>
                                     </div>
                                 </div>
                             </div>
@@ -1014,7 +1354,7 @@
                                     <div class="update-info">
                                         <div class="form-group">
                                             <label><i class="fas fa-tag"></i> <span data-i18n="updater.current_version">Current Version:</span></label>
-                                            <div class="version-display" id="current-version">1.0.0</div>
+                                            <div class="version-display" id="current-version">1.1.0</div>
                                         </div>
 
                                         <label class="checkbox-label">
@@ -1071,7 +1411,32 @@
                             <input type="text" id="timelapse-output-name" placeholder="timelapse_video" data-i18n-placeholder="placeholder.output_name">
                         </div>
 
+                        <div class="form-group">
+                            <label for="timelapse-preset">
+                                <i class="fas fa-magic"></i>
+                                <span data-i18n="timelapse.export_preset">Export Preset</span>
+                            </label>
+                            <select id="timelapse-preset">
+                                <option value="" data-i18n="timelapse.custom_settings">Custom Settings</option>
+                            </select>
+                            <div class="preset-description" id="preset-description"></div>
+                        </div>
+
                         <div class="form-row">
+                            <div class="form-group">
+                                <label for="timelapse-resolution">
+                                    <i class="fas fa-expand-arrows-alt"></i>
+                                    <span data-i18n="timelapse.resolution">Resolution</span>
+                                </label>
+                                <select id="timelapse-resolution">
+                                    <option value="1280x720">720p (1280x720)</option>
+                                    <option value="1920x1080" selected>1080p (1920x1080)</option>
+                                    <option value="1080x1080">1080x1080 (Square)</option>
+                                    <option value="1080x1920">1080x1920 (Vertical)</option>
+                                    <option value="3840x2160">4K (3840x2160)</option>
+                                </select>
+                            </div>
+
                             <div class="form-group">
                                 <label for="timelapse-fps">
                                     <i class="fas fa-tachometer-alt"></i>
@@ -1084,7 +1449,9 @@
                                     <option value="60">60 FPS</option>
                                 </select>
                             </div>
+                        </div>
 
+                        <div class="form-row">
                             <div class="form-group">
                                 <label for="timelapse-quality">
                                     <i class="fas fa-adjust"></i>
@@ -1095,6 +1462,18 @@
                                     <option value="medium" data-i18n="timelapse.quality_medium">Medium</option>
                                     <option value="high" selected data-i18n="timelapse.quality_high">High</option>
                                     <option value="ultra" data-i18n="timelapse.quality_ultra">Ultra</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="timelapse-format">
+                                    <i class="fas fa-file-video"></i>
+                                    <span data-i18n="timelapse.format">Format</span>
+                                </label>
+                                <select id="timelapse-format">
+                                    <option value="mp4" selected>MP4 (H.264)</option>
+                                    <option value="mp4_h265">MP4 (H.265)</option>
+                                    <option value="webm">WebM</option>
                                 </select>
                             </div>
                         </div>
@@ -1228,11 +1607,11 @@
                         <div class="version-info">
                             <div class="version-item">
                                 <span data-i18n="updater.current_version">Current Version:</span>
-                                <span id="modal-current-version">1.0.0</span>
+                                <span id="modal-current-version">1.1.0</span>
                             </div>
                             <div class="version-item">
                                 <span data-i18n="updater.new_version">New Version:</span>
-                                <span id="modal-new-version">1.0.1</span>
+                                <span id="modal-new-version">1.1.1</span>
                             </div>
                         </div>
 
