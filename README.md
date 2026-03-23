@@ -1,6 +1,9 @@
-# Timelapse Webcam
+# Timelapse Webcam — Open Visual Monitoring for Citizen Science, Journalism, and Environmental Transparency
 
-A desktop application for automated timelapse creation from webcam and screen capture sources. Built with Electron and powered by modern video processing technologies for high-quality time-lapse photography and videography.
+An open-source desktop application for automated timelapse creation from webcam and screen capture sources. Built with Electron and powered by FFmpeg and Sharp for high-quality time-lapse photography, environmental monitoring, and visual documentation.
+
+Licensed under the [EUPL-1.2](LICENSE).
+
 
 ## Features
 
@@ -204,9 +207,13 @@ npm run dist           # Create distribution packages
 - Automatic timelapse generation at specified intervals
 - Cross-platform support with modern Electron-based interface
 
+## License
+
+Licensed under the [European Union Public Licence V. 1.2 (EUPL-1.2)](LICENSE).
+
 ## Credits
 
-Developed by **www.bavamont.com**
+Developed by [**Bavamont**](https://www.bavamont.com) — Füssen, Bavaria, Germany
 
 Built with:
 - **Electron** - Cross-platform desktop application framework
@@ -216,7 +223,3 @@ Built with:
 - **ssh2-sftp-client** - SFTP client for secure file transfers
 - **electron-store** - Application settings persistence
 - **node-cron** - Task scheduling for automated capture
-
----
-
-*For support, feature requests, or bug reports, please check the project's issue tracker or visit the project website.*
